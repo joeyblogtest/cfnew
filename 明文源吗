@@ -1217,17 +1217,24 @@ async function handleSubscriptionRequest(request, user, url = null) {
     const workerDomain = url.hostname;
     const target = url.searchParams.get('target') || 'base64';
 
+    // 重新解析环境变量以确保订阅生成时变量正确
+    const newProtocolControl = env.np || env.NP;
+    const trojanProtocolControl = env.tp || env.TP;
+    const isNewProtocolEnabled = newProtocolControl && newProtocolControl.toLowerCase() === 'on';
+    const isTrojanProtocolEnabled = trojanProtocolControl && trojanProtocolControl.toLowerCase() === 'on';
+
     const nativeList = [{ ip: workerDomain, isp: '原生地址' }];
     finalLinks.push(...generateLinksFromSource(nativeList, user, workerDomain));
 
+
     // 添加新协议链接
-    if (enableNewProtocol) {
+    if (isNewProtocolEnabled) {
         const newProtocolList = [{ ip: workerDomain, isp: '新协议' }];
         finalLinks.push(...generateNewProtocolLinks(newProtocolList, user, workerDomain));
     }
 
     // 添加Trojan协议链接
-    if (enableTrojanProtocol) {
+    if (isTrojanProtocolEnabled) {
         const trojanProtocolList = [{ ip: workerDomain, isp: 'Trojan协议' }];
         finalLinks.push(...generateTrojanProtocolLinks(trojanProtocolList, user, workerDomain));
     }
