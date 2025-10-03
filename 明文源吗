@@ -884,12 +884,14 @@ export default {
 			}
 
 			if (request.headers.get('Upgrade') === 'websocket') {
-				// 检查是否是Trojan协议请求（通过特定的路径或头部判断）
-				const isTrojanRequest = request.headers.get('sec-websocket-protocol')?.includes('trojan') || 
-									   url.pathname.includes('/trojan');
-				
-				if (enableTrojanProtocol && isTrojanRequest) {
-					return await trojanOverWSHandler(request, authToken);
+				// 如果启用了Trojan协议，优先尝试Trojan处理
+				if (enableTrojanProtocol) {
+					try {
+						return await trojanOverWSHandler(request, authToken);
+					} catch (error) {
+						// 如果Trojan处理失败，回退到普通WebSocket处理
+						return await handleWsRequest(request);
+					}
 				} else {
 					return await handleWsRequest(request);
 				}
@@ -2063,25 +2065,16 @@ function generateNewProtocolLinks(list, user, workerDomain) {
 
 function generateTrojanProtocolLinks(list, user, workerDomain) {
     const links = [];
-    const proto = atob('dmxlc3M=');
     
     list.forEach(item => {
         const nodeNameBase = item.isp.replace(/\s/g, '_');
         const safeIP = item.ip.includes(':') ? `[${item.ip}]` : item.ip;
         
-        // Trojan协议使用VLESS格式但通过特定路径区分，端口443
+        // Trojan协议使用真正的Trojan格式
         const trojanNodeName = `${nodeNameBase}-443-Trojan`;
         
-        // Trojan协议链接格式：vless://uuid@host:port?encryption=none&security=tls&type=ws&host=domain&path=/trojan
-        const trojanParams = new URLSearchParams({
-            encryption: 'none',
-            security: 'tls',
-            type: 'ws',
-            host: workerDomain,
-            path: '/trojan'
-        });
-        
-        const trojanLink = `${proto}://${user}@${safeIP}:443?${trojanParams.toString()}#${encodeURIComponent(trojanNodeName)}`;
+        // Trojan协议链接格式：trojan://password@host:port?type=ws&host=domain&path=/
+        const trojanLink = `trojan://${user}@${safeIP}:443?type=ws&host=${workerDomain}&path=/#${encodeURIComponent(trojanNodeName)}`;
         links.push(trojanLink);
     });
     
