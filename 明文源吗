@@ -2038,17 +2038,16 @@ function generateNewProtocolLinks(list, user, workerDomain) {
         const nodeNameBase = item.isp.replace(/\s/g, '_');
         const safeIP = item.ip.includes(':') ? `[${item.ip}]` : item.ip;
         
-        // 新协议使用POST请求，端口443
+        // 新协议使用gRPC格式，端口443
         const newProtocolNodeName = `${nodeNameBase}-443-新协议`;
         
-        // 新协议链接格式：使用POST请求类型
+        // 新协议链接格式：使用gRPC类型
         const newProtocolParams = new URLSearchParams({
             encryption: 'none',
             security: 'tls',
-            type: 'http',
-            method: 'POST',
-            host: workerDomain,
-            path: '/'
+            type: 'grpc',
+            serviceName: 'grpc',
+            host: workerDomain
         });
         
         const newProtocolLink = `${proto}://${user}@${safeIP}:443?${newProtocolParams.toString()}#${encodeURIComponent(newProtocolNodeName)}`;
@@ -2060,25 +2059,16 @@ function generateNewProtocolLinks(list, user, workerDomain) {
 
 function generateTrojanProtocolLinks(list, user, workerDomain) {
     const links = [];
-    const proto = atob('dmxlc3M=');
     
     list.forEach(item => {
         const nodeNameBase = item.isp.replace(/\s/g, '_');
         const safeIP = item.ip.includes(':') ? `[${item.ip}]` : item.ip;
         
-        // Trojan协议使用WebSocket，端口443
+        // Trojan协议使用Trojan格式，端口443
         const trojanNodeName = `${nodeNameBase}-443-Trojan`;
         
-        // Trojan协议链接格式：使用WebSocket类型
-        const trojanParams = new URLSearchParams({
-            encryption: 'none',
-            security: 'tls',
-            type: 'ws',
-            host: workerDomain,
-            path: '/'
-        });
-        
-        const trojanLink = `${proto}://${user}@${safeIP}:443?${trojanParams.toString()}#${encodeURIComponent(trojanNodeName)}`;
+        // Trojan协议链接格式：trojan://password@host:port?type=ws&host=domain&path=/
+        const trojanLink = `trojan://${user}@${safeIP}:443?type=ws&host=${workerDomain}&path=/#${encodeURIComponent(trojanNodeName)}`;
         links.push(trojanLink);
     });
     
