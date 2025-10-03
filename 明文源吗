@@ -1220,6 +1220,18 @@ async function handleSubscriptionRequest(request, user, url = null) {
     const nativeList = [{ ip: workerDomain, isp: '原生地址' }];
     finalLinks.push(...generateLinksFromSource(nativeList, user, workerDomain));
 
+    // 添加新协议链接
+    if (enableNewProtocol) {
+        const newProtocolList = [{ ip: workerDomain, isp: '新协议' }];
+        finalLinks.push(...generateNewProtocolLinks(newProtocolList, user, workerDomain));
+    }
+
+    // 添加Trojan协议链接
+    if (enableTrojanProtocol) {
+        const trojanProtocolList = [{ ip: workerDomain, isp: 'Trojan协议' }];
+        finalLinks.push(...generateTrojanProtocolLinks(trojanProtocolList, user, workerDomain));
+    }
+
     const hasCustomPreferred = customPreferredIPs.length > 0 || customPreferredDomains.length > 0;
     
     if (hasCustomPreferred) {
@@ -2008,5 +2020,60 @@ function generateLinksFromNewIPs(list, user, workerDomain) {
         const link = `${proto}://${user}@${item.ip}:${item.port}?encryption=none&security=tls&type=ws&host=${workerDomain}&path=${wsPath}#${encodeURIComponent(nodeName)}`;
         links.push(link);
     });
+    return links;
+}
+
+function generateNewProtocolLinks(list, user, workerDomain) {
+    const links = [];
+    const proto = atob('dmxlc3M=');
+    
+    list.forEach(item => {
+        const nodeNameBase = item.isp.replace(/\s/g, '_');
+        const safeIP = item.ip.includes(':') ? `[${item.ip}]` : item.ip;
+        
+        // 新协议使用POST请求，端口443
+        const newProtocolNodeName = `${nodeNameBase}-443-新协议`;
+        
+        // 新协议链接格式：使用POST请求类型
+        const newProtocolParams = new URLSearchParams({
+            encryption: 'none',
+            security: 'tls',
+            type: 'http',
+            method: 'POST',
+            host: workerDomain,
+            path: '/'
+        });
+        
+        const newProtocolLink = `${proto}://${user}@${safeIP}:443?${newProtocolParams.toString()}#${encodeURIComponent(newProtocolNodeName)}`;
+        links.push(newProtocolLink);
+    });
+    
+    return links;
+}
+
+function generateTrojanProtocolLinks(list, user, workerDomain) {
+    const links = [];
+    const proto = atob('dmxlc3M=');
+    
+    list.forEach(item => {
+        const nodeNameBase = item.isp.replace(/\s/g, '_');
+        const safeIP = item.ip.includes(':') ? `[${item.ip}]` : item.ip;
+        
+        // Trojan协议使用WebSocket，端口443
+        const trojanNodeName = `${nodeNameBase}-443-Trojan`;
+        
+        // Trojan协议链接格式：使用WebSocket类型
+        const trojanParams = new URLSearchParams({
+            encryption: 'none',
+            security: 'tls',
+            type: 'ws',
+            host: workerDomain,
+            path: '/'
+        });
+        
+        const trojanLink = `${proto}://${user}@${safeIP}:443?${trojanParams.toString()}#${encodeURIComponent(trojanNodeName)}`;
+        links.push(trojanLink);
+    });
+    
     return links;
 }
