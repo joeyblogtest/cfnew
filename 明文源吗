@@ -1132,6 +1132,67 @@
                 });
             });
         </script>
+        <!-- Custom Generator UI -->
+        <div id="custom-tool-btn" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; cursor: pointer; opacity: 0.7; transition: opacity 0.3s;">
+            <div style="width: 40px; height: 40px; background: #003300; border: 1px solid #00ff00; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 10px #00ff00;">
+                <span style="color: #00ff00; font-size: 20px;">⚙️</span>
+            </div>
+        </div>
+        <div id="custom-tool-modal" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 300px; background: rgba(0, 10, 0, 0.95); border: 1px solid #00ff00; padding: 20px; z-index: 10000; box-shadow: 0 0 20px rgba(0, 255, 0, 0.3); border-radius: 5px; font-family: 'Courier New', monospace;">
+            <h3 style="color: #00ff00; margin: 0 0 15px 0; text-align: center; border-bottom: 1px solid #004400; padding-bottom: 10px;">自选优选订阅生成</h3>
+            <div style="margin-bottom: 15px;">
+                <label style="color: #00aa00; display: block; margin-bottom: 5px; font-size: 12px;">UUID:</label>
+                <div style="display: flex; gap: 5px;">
+                    <input type="text" id="custom-uuid" style="flex: 1; background: #001100; border: 1px solid #004400; color: #00ff00; padding: 5px; font-family: monospace;" placeholder="输入UUID">
+                    <button onclick="generateUUID()" style="background: #002200; border: 1px solid #00ff00; color: #00ff00; cursor: pointer; padding: 5px;">🎲</button>
+                </div>
+            </div>
+            <div style="margin-bottom: 15px;">
+                <label style="color: #00aa00; display: block; margin-bottom: 5px; font-size: 12px;">优选域名 (Host):</label>
+                <input type="text" id="custom-host" style="width: 100%; box-sizing: border-box; background: #001100; border: 1px solid #004400; color: #00ff00; padding: 5px; font-family: monospace;" placeholder="例如: cdn.example.com">
+            </div>
+            <button onclick="generateSubLink()" style="width: 100%; background: #003300; border: 1px solid #00ff00; color: #00ff00; padding: 8px; cursor: pointer; margin-bottom: 15px; font-weight: bold;">生成临时订阅链接</button>
+            <div id="result-area" style="display: none;">
+                <label style="color: #00aa00; display: block; margin-bottom: 5px; font-size: 12px;">订阅链接:</label>
+                <textarea id="custom-result" rows="3" style="width: 100%; box-sizing: border-box; background: #001100; border: 1px solid #004400; color: #00ff00; padding: 5px; font-family: monospace; font-size: 11px; word-break: break-all;" readonly></textarea>
+                <button onclick="copyResult()" style="width: 100%; margin-top: 5px; background: #002200; border: 1px solid #006600; color: #00cc00; padding: 5px; cursor: pointer;">复制链接</button>
+            </div>
+            <button onclick="closeModal()" style="position: absolute; top: 5px; right: 10px; background: none; border: none; color: #004400; cursor: pointer; font-size: 16px;">×</button>
+        </div>
+        <script>
+            document.getElementById('custom-tool-btn').addEventListener('click', function() {
+                document.getElementById('custom-tool-modal').style.display = 'block';
+            });
+            function closeModal() {
+                document.getElementById('custom-tool-modal').style.display = 'none';
+            }
+            function generateUUID() {
+                var uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                    var r = Math.random() * 16 | 0;
+                    var v = c == 'x' ? r : (r & 0x3 | 0x8);
+                    return v.toString(16);
+                });
+                document.getElementById('custom-uuid').value = uuid;
+            }
+            function generateSubLink() {
+                var uuid = document.getElementById('custom-uuid').value.trim();
+                var host = document.getElementById('custom-host').value.trim();
+                if (!uuid || !host) {
+                    alert('请填写 UUID 和 域名');
+                    return;
+                }
+                var currentUrl = window.location.origin;
+                var subUrl = currentUrl + '/sub?uuid=' + uuid + '&host=' + host;
+                document.getElementById('custom-result').value = subUrl;
+                document.getElementById('result-area').style.display = 'block';
+            }
+            function copyResult() {
+                var copyText = document.getElementById('custom-result');
+                copyText.select();
+                document.execCommand('copy');
+                alert('已复制到剪贴板');
+            }
+        </script>
     </body>
     </html>`;
                         return new Response(terminalHtml, { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
@@ -1179,6 +1240,11 @@
                     }
                     if (url.pathname.includes('/sub')) {
                         const pathParts = url.pathname.split('/');
+                        // 允许通过URL参数自定义UUID和Host
+                        if (url.searchParams.has('uuid') && url.searchParams.has('host')) {
+                            return await handleSubscriptionRequest(request, url.searchParams.get('uuid'), url);
+                        }
+
                         if (pathParts.length === 2 && pathParts[1] === 'sub') {
                             const user = pathParts[0].substring(1);
                             if (isValidFormat(user)) {
@@ -1215,8 +1281,13 @@
     async function handleSubscriptionRequest(request, user, url = null) {
         if (!url) url = new URL(request.url);
         
+        // 优先使用URL参数中的值
+        if (url.searchParams.has('uuid')) {
+            user = url.searchParams.get('uuid');
+        }
+        
         const finalLinks = [];
-        const workerDomain = url.hostname;
+        const workerDomain = url.searchParams.get('host') || url.hostname;
         const target = url.searchParams.get('target') || 'base64';
 
         async function addNodesFromList(list) {
