@@ -2522,7 +2522,7 @@
                                 </div>
                                 <div style="width: 100px;">
                                     <label style="display: block; margin-bottom: 5px; color: #00ff00; font-size: 0.9rem;">${t.latencyTestPort}</label>
-                                    <input type="number" id="latencyTestPort" value="80" min="1" max="65535" style="width: 100%; padding: 10px; background: rgba(0, 0, 0, 0.8); border: 1px solid #00ff00; color: #00ff00; font-family: 'Courier New', monospace; font-size: 13px;">
+                                    <input type="number" id="latencyTestPort" value="443" min="1" max="65535" style="width: 100%; padding: 10px; background: rgba(0, 0, 0, 0.8); border: 1px solid #00ff00; color: #00ff00; font-family: 'Courier New', monospace; font-size: 13px;">
                                 </div>
                                 <div id="randomCountDiv" style="width: 100px; display: none;">
                                     <label style="display: block; margin-bottom: 5px; color: #00ff00; font-size: 0.9rem;">${t.randomCount}</label>
@@ -3858,7 +3858,9 @@
                                 const coloDisplay = result.colo ? ' <span style="color: #00aaff;">[' + result.colo + ']</span>' : '';
                                 info.innerHTML = '<span style="color: #00ff00;">' + host + ':' + port + '</span>' + coloDisplay + ' <span style="color: #ffff00;">' + result.latency + 'ms</span>';
                             } else {
-                                info.innerHTML = '<span style="color: #ff4444;">' + host + ':' + port + '</span> <span style="color: #ff4444;">${isFarsi ? 'زمان تمام شد' : '超时'}</span>';
+                                const errorDetail = result.error || '${isFarsi ? 'زمان تمام شد' : '超时'}';
+                                const testUrlDisplay = result.testUrl ? '<br><span style="color: #888; font-size: 11px;">URL: ' + result.testUrl + '</span>' : '';
+                                info.innerHTML = '<span style="color: #ff4444;">' + host + ':' + port + '</span> <span style="color: #ff6666; font-size: 12px;">' + errorDetail + '</span>' + testUrlDisplay;
                             }
                             
                             resultItem.appendChild(checkbox);
@@ -3928,10 +3930,23 @@
                     });
                 }
                 
+                function ipToHex(ip) {
+                    const parts = ip.split('.');
+                    if (parts.length !== 4) return null;
+                    let hex = '';
+                    for (let i = 0; i < 4; i++) {
+                        const num = parseInt(parts[i]);
+                        if (isNaN(num) || num < 0 || num > 255) return null;
+                        hex += num.toString(16).padStart(2, '0');
+                    }
+                    return hex;
+                }
+                
                 async function testLatency(host, port, signal) {
                     const startTime = Date.now();
-                    const timeout = 5000;
+                    const timeout = 8000;
                     let colo = '';
+                    let testUrl = '';
                     
                     try {
                         const controller = new AbortController();
@@ -3941,7 +3956,13 @@
                             signal.addEventListener('abort', () => controller.abort());
                         }
                         
-                        const testUrl = 'http://' + host + ':' + port + '/cdn-cgi/trace';
+                        const cleanHost = host.replace(/^\\[|\\]$/g, '');
+                        const hexIP = ipToHex(cleanHost);
+                        const testDomain = hexIP ? (hexIP + '.nip.lfree.org') : (cleanHost + '.nip.lfree.org');
+                        testUrl = 'https://' + testDomain + ':' + port + '/';
+                        
+                        console.log('[LatencyTest] Testing:', testUrl, 'Original:', host + ':' + port, 'HexIP:', hexIP);
+                        
                         const response = await fetch(testUrl, { 
                             signal: controller.signal
                         });
@@ -3949,17 +3970,32 @@
                         clearTimeout(timeoutId);
                         const latency = Date.now() - startTime;
                         
-                        if (response.ok) {
-                            const text = await response.text();
-                            const coloMatch = text.match(/colo=([A-Z]+)/);
-                            if (coloMatch) {
-                                colo = coloMatch[1];
-                            }
+                        console.log('[LatencyTest] Response:', response.status, response.statusText);
+                        
+                        if (!response.ok) {
+                            return { success: false, latency: latency, error: 'HTTP ' + response.status + ' ' + response.statusText, colo: '', testUrl: testUrl };
                         }
                         
-                        return { success: true, latency: latency, colo: colo };
+                        try {
+                            const text = await response.text();
+                            console.log('[LatencyTest] Response body:', text.substring(0, 200));
+                            const data = JSON.parse(text);
+                            if (data.colo) {
+                                colo = data.colo;
+                            }
+                        } catch (e) {
+                            console.log('[LatencyTest] Parse error:', e.message);
+                        }
+                        
+                        return { success: true, latency: latency, colo: colo, testUrl: testUrl };
                     } catch (error) {
-                        return { success: false, latency: -1, error: error.message, colo: '' };
+                        const elapsed = Date.now() - startTime;
+                        let errorMsg = error.message;
+                        if (error.name === 'AbortError' || elapsed >= timeout - 100) {
+                            errorMsg = '${isFarsi ? 'زمان تمام شد' : '超时'} (' + elapsed + 'ms)';
+                        }
+                        console.log('[LatencyTest] Error:', errorMsg, 'URL:', testUrl);
+                        return { success: false, latency: -1, error: errorMsg, colo: '', testUrl: testUrl };
                     }
                 }
             });
