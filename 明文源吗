@@ -1943,6 +1943,15 @@
                     testComplete: '测试完成',
                     latencyMs: '延迟',
                     timeout: '超时',
+                    ipSource: 'IP来源:',
+                    manualInput: '手动输入',
+                    cfRandomIP: 'CF随机IP',
+                    urlFetch: 'URL获取',
+                    randomCount: '生成数量:',
+                    fetchURL: '获取URL:',
+                    fetchURLPlaceholder: '输入优选IP的URL地址',
+                    generateIP: '生成IP',
+                    fetchIP: '获取IP',
                     socks5Config: 'SOCKS5配置 (s):',
                     customHomepage: '自定义首页URL (homepage):',
                     customHomepagePlaceholder: '例如: https://example.com',
@@ -2065,6 +2074,15 @@
                     testComplete: 'تست کامل شد',
                     latencyMs: 'تاخیر',
                     timeout: 'زمان تمام شد',
+                    ipSource: 'منبع IP:',
+                    manualInput: 'ورودی دستی',
+                    cfRandomIP: 'IP تصادفی CF',
+                    urlFetch: 'دریافت از URL',
+                    randomCount: 'تعداد تولید:',
+                    fetchURL: 'URL دریافت:',
+                    fetchURLPlaceholder: 'آدرس URL لیست IP را وارد کنید',
+                    generateIP: 'تولید IP',
+                    fetchIP: 'دریافت IP',
                     socks5Config: 'تنظیمات SOCKS5 (s):',
                     customHomepage: 'URL صفحه اصلی سفارشی (homepage):',
                     customHomepagePlaceholder: 'مثال: https://example.com',
@@ -2491,18 +2509,39 @@
                                 <small style="color: #00aa00; font-size: 0.85rem;">${isFarsi ? 'URL منبع لیست IP ترجیحی سفارشی، اگر خالی بگذارید از آدرس پیش‌فرض استفاده می‌شود' : '自定义优选IP列表来源URL，留空则使用默认地址'}</small>
                         </div>
                         
-                        <!-- 延迟测试功能区域 -->
                         <div style="margin-bottom: 20px; padding: 15px; background: rgba(0, 40, 0, 0.6); border: 2px solid #00aa00; border-radius: 8px;">
                             <h4 style="color: #00ff00; margin: 0 0 15px 0; font-size: 1.1rem; text-shadow: 0 0 5px #00ff00;">⚡ ${t.latencyTest}</h4>
-                            <div style="display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap;">
-                                <div style="flex: 1; min-width: 200px;">
-                                    <label style="display: block; margin-bottom: 5px; color: #00ff00; font-size: 0.9rem;">${t.latencyTestIP}</label>
-                                    <input type="text" id="latencyTestInput" placeholder="${t.latencyTestIPPlaceholder}" style="width: 100%; padding: 10px; background: rgba(0, 0, 0, 0.8); border: 1px solid #00ff00; color: #00ff00; font-family: 'Courier New', monospace; font-size: 13px;">
+                            <div style="display: flex; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; align-items: center;">
+                                <div style="min-width: 120px;">
+                                    <label style="display: block; margin-bottom: 5px; color: #00ff00; font-size: 0.9rem;">${t.ipSource}</label>
+                                    <select id="ipSourceSelect" style="width: 100%; padding: 10px; background: rgba(0, 0, 0, 0.8); border: 1px solid #00ff00; color: #00ff00; font-family: 'Courier New', monospace; font-size: 13px; cursor: pointer;">
+                                        <option value="manual">${t.manualInput}</option>
+                                        <option value="cfRandom">${t.cfRandomIP}</option>
+                                        <option value="urlFetch">${t.urlFetch}</option>
+                                    </select>
                                 </div>
                                 <div style="width: 100px;">
                                     <label style="display: block; margin-bottom: 5px; color: #00ff00; font-size: 0.9rem;">${t.latencyTestPort}</label>
                                     <input type="number" id="latencyTestPort" value="443" min="1" max="65535" style="width: 100%; padding: 10px; background: rgba(0, 0, 0, 0.8); border: 1px solid #00ff00; color: #00ff00; font-family: 'Courier New', monospace; font-size: 13px;">
                                 </div>
+                                <div id="randomCountDiv" style="width: 100px; display: none;">
+                                    <label style="display: block; margin-bottom: 5px; color: #00ff00; font-size: 0.9rem;">${t.randomCount}</label>
+                                    <input type="number" id="randomIPCount" value="20" min="1" max="100" style="width: 100%; padding: 10px; background: rgba(0, 0, 0, 0.8); border: 1px solid #00ff00; color: #00ff00; font-family: 'Courier New', monospace; font-size: 13px;">
+                                </div>
+                            </div>
+                            <div id="manualInputDiv" style="margin-bottom: 10px;">
+                                <label style="display: block; margin-bottom: 5px; color: #00ff00; font-size: 0.9rem;">${t.latencyTestIP}</label>
+                                <input type="text" id="latencyTestInput" placeholder="${t.latencyTestIPPlaceholder}" style="width: 100%; padding: 10px; background: rgba(0, 0, 0, 0.8); border: 1px solid #00ff00; color: #00ff00; font-family: 'Courier New', monospace; font-size: 13px;">
+                            </div>
+                            <div id="urlFetchDiv" style="margin-bottom: 10px; display: none;">
+                                <label style="display: block; margin-bottom: 5px; color: #00ff00; font-size: 0.9rem;">${t.fetchURL}</label>
+                                <div style="display: flex; gap: 8px;">
+                                    <input type="text" id="fetchURLInput" placeholder="${t.fetchURLPlaceholder}" style="flex: 1; padding: 10px; background: rgba(0, 0, 0, 0.8); border: 1px solid #00ff00; color: #00ff00; font-family: 'Courier New', monospace; font-size: 13px;">
+                                    <button type="button" id="fetchIPBtn" style="background: rgba(0, 200, 255, 0.2); border: 1px solid #00aaff; padding: 8px 16px; color: #00aaff; font-family: 'Courier New', monospace; cursor: pointer; white-space: nowrap;">⬇ ${t.fetchIP}</button>
+                                </div>
+                            </div>
+                            <div id="cfRandomDiv" style="margin-bottom: 10px; display: none;">
+                                <button type="button" id="generateCFIPBtn" style="background: rgba(255, 200, 0, 0.2); border: 1px solid #ffaa00; padding: 10px 20px; color: #ffaa00; font-family: 'Courier New', monospace; cursor: pointer; width: 100%;">🎲 ${t.generateIP}</button>
                             </div>
                             <div style="display: flex; gap: 10px; margin-bottom: 15px;">
                                 <button type="button" id="startLatencyTest" style="background: rgba(0, 255, 0, 0.2); border: 1px solid #00ff00; padding: 8px 16px; color: #00ff00; font-family: 'Courier New', monospace; cursor: pointer; transition: all 0.3s;">▶ ${t.startTest}</button>
@@ -3634,7 +3673,6 @@
                     });
                 }
                 
-                // 延迟测试功能
                 let testAbortController = null;
                 let testResults = [];
                 
@@ -3646,6 +3684,97 @@
                 const addSelectedBtn = document.getElementById('addSelectedToYx');
                 const selectAllBtn = document.getElementById('selectAllResults');
                 const deselectAllBtn = document.getElementById('deselectAllResults');
+                const ipSourceSelect = document.getElementById('ipSourceSelect');
+                const manualInputDiv = document.getElementById('manualInputDiv');
+                const urlFetchDiv = document.getElementById('urlFetchDiv');
+                const cfRandomDiv = document.getElementById('cfRandomDiv');
+                const randomCountDiv = document.getElementById('randomCountDiv');
+                const generateCFIPBtn = document.getElementById('generateCFIPBtn');
+                const fetchIPBtn = document.getElementById('fetchIPBtn');
+                
+                const CF_CIDR_LIST = [
+                    '173.245.48.0/20', '103.21.244.0/22', '103.22.200.0/22', '103.31.4.0/22',
+                    '141.101.64.0/18', '108.162.192.0/18', '190.93.240.0/20', '188.114.96.0/20',
+                    '197.234.240.0/22', '198.41.128.0/17', '162.158.0.0/15', '104.16.0.0/13',
+                    '104.24.0.0/14', '172.64.0.0/13', '131.0.72.0/22'
+                ];
+                
+                function generateRandomIPFromCIDR(cidr) {
+                    const [baseIP, prefixLength] = cidr.split('/');
+                    const prefix = parseInt(prefixLength);
+                    const hostBits = 32 - prefix;
+                    const ipParts = baseIP.split('.').map(p => parseInt(p));
+                    const ipInt = (ipParts[0] << 24) | (ipParts[1] << 16) | (ipParts[2] << 8) | ipParts[3];
+                    const randomOffset = Math.floor(Math.random() * Math.pow(2, hostBits));
+                    const mask = (0xFFFFFFFF << hostBits) >>> 0;
+                    const randomIP = (((ipInt & mask) >>> 0) + randomOffset) >>> 0;
+                    return [(randomIP >>> 24) & 0xFF, (randomIP >>> 16) & 0xFF, (randomIP >>> 8) & 0xFF, randomIP & 0xFF].join('.');
+                }
+                
+                function generateCFRandomIPs(count, port) {
+                    const ips = [];
+                    for (let i = 0; i < count; i++) {
+                        const cidr = CF_CIDR_LIST[Math.floor(Math.random() * CF_CIDR_LIST.length)];
+                        const ip = generateRandomIPFromCIDR(cidr);
+                        ips.push(ip + ':' + port);
+                    }
+                    return ips;
+                }
+                
+                if (ipSourceSelect) {
+                    ipSourceSelect.addEventListener('change', function() {
+                        const value = this.value;
+                        manualInputDiv.style.display = value === 'manual' ? 'block' : 'none';
+                        urlFetchDiv.style.display = value === 'urlFetch' ? 'block' : 'none';
+                        cfRandomDiv.style.display = value === 'cfRandom' ? 'block' : 'none';
+                        randomCountDiv.style.display = value === 'cfRandom' ? 'block' : 'none';
+                    });
+                }
+                
+                if (generateCFIPBtn) {
+                    generateCFIPBtn.addEventListener('click', function() {
+                        const count = parseInt(document.getElementById('randomIPCount').value) || 20;
+                        const port = document.getElementById('latencyTestPort').value || '443';
+                        const ips = generateCFRandomIPs(count, port);
+                        document.getElementById('latencyTestInput').value = ips.join(',');
+                        manualInputDiv.style.display = 'block';
+                        showStatus('${isFarsi ? 'تولید شد' : '已生成'} ' + count + ' ${isFarsi ? 'IP تصادفی CF' : '个CF随机IP'}', 'success');
+                    });
+                }
+                
+                if (fetchIPBtn) {
+                    fetchIPBtn.addEventListener('click', async function() {
+                        const urlInput = document.getElementById('fetchURLInput');
+                        const fetchUrl = urlInput.value.trim();
+                        if (!fetchUrl) {
+                            alert('${isFarsi ? 'لطفا URL را وارد کنید' : '请输入URL'}');
+                            return;
+                        }
+                        
+                        fetchIPBtn.disabled = true;
+                        fetchIPBtn.textContent = '${isFarsi ? 'در حال دریافت...' : '获取中...'}';
+                        
+                        try {
+                            const response = await fetch(fetchUrl);
+                            if (!response.ok) throw new Error('HTTP ' + response.status);
+                            const text = await response.text();
+                            const lines = text.trim().split('\\n').map(l => l.trim()).filter(l => l && !l.startsWith('#'));
+                            
+                            if (lines.length > 0) {
+                                document.getElementById('latencyTestInput').value = lines.join(',');
+                                manualInputDiv.style.display = 'block';
+                                showStatus('${isFarsi ? 'دریافت شد' : '已获取'} ' + lines.length + ' ${isFarsi ? 'IP' : '个IP'}', 'success');
+                            } else {
+                                showStatus('${isFarsi ? 'داده‌ای یافت نشد' : '未获取到数据'}', 'error');
+                            }
+                        } catch (err) {
+                            showStatus('${isFarsi ? 'خطا در دریافت' : '获取失败'}: ' + err.message, 'error');
+                        } finally {
+                            fetchIPBtn.disabled = false;
+                            fetchIPBtn.textContent = '⬇ ${isFarsi ? 'دریافت IP' : '获取IP'}';
+                        }
+                    });
+                }
                 
                 if (startTestBtn) {
                     startTestBtn.addEventListener('click', async function() {
@@ -3659,11 +3788,9 @@
                             return;
                         }
                         
-                        // 解析输入的IP/域名列表
                         const targets = inputValue.split(',').map(t => t.trim()).filter(t => t);
                         if (targets.length === 0) return;
                         
-                        // 显示测试状态
                         startTestBtn.style.display = 'none';
                         stopTestBtn.style.display = 'inline-block';
                         testStatus.style.display = 'block';
@@ -3685,7 +3812,6 @@
                             let port = defaultPort;
                             let nodeName = '';
                             
-                            // 解析 IP:端口#名称 格式
                             if (target.includes('#')) {
                                 const parts = target.split('#');
                                 nodeName = parts[1] || '';
@@ -3706,12 +3832,15 @@
                             }
                             
                             const result = await testLatency(host, port, testAbortController.signal);
-                            result.nodeName = nodeName || host + ':' + port;
                             result.host = host;
                             result.port = port;
+                            if (result.success && result.colo) {
+                                result.nodeName = nodeName || ('CF-' + result.colo);
+                            } else {
+                                result.nodeName = nodeName || host;
+                            }
                             testResults.push(result);
                             
-                            // 添加结果到列表
                             const resultItem = document.createElement('div');
                             resultItem.style.cssText = 'display: flex; align-items: center; padding: 8px; border-bottom: 1px solid #003300; gap: 10px;';
                             
@@ -3726,9 +3855,10 @@
                             info.style.cssText = 'flex: 1; font-family: monospace; font-size: 13px;';
                             
                             if (result.success) {
-                                info.innerHTML = '<span style="color: #00ff00;">' + result.nodeName + '</span> <span style="color: #ffff00;">' + result.latency + 'ms</span>';
+                                const coloDisplay = result.colo ? ' <span style="color: #00aaff;">[' + result.colo + ']</span>' : '';
+                                info.innerHTML = '<span style="color: #00ff00;">' + host + ':' + port + '</span>' + coloDisplay + ' <span style="color: #ffff00;">' + result.latency + 'ms</span>';
                             } else {
-                                info.innerHTML = '<span style="color: #ff4444;">' + result.nodeName + '</span> <span style="color: #ff4444;">${isFarsi ? 'زمان تمام شد' : '超时'}</span>';
+                                info.innerHTML = '<span style="color: #ff4444;">' + host + ':' + port + '</span> <span style="color: #ff4444;">${isFarsi ? 'زمان تمام شد' : '超时'}</span>';
                             }
                             
                             resultItem.appendChild(checkbox);
@@ -3782,7 +3912,8 @@
                             const idx = parseInt(cb.dataset.index);
                             const result = testResults[idx];
                             if (result && result.success) {
-                                const itemStr = result.host + ':' + result.port + '#' + result.nodeName + '-' + result.latency + 'ms';
+                                const nameWithLatency = result.colo ? (result.colo + '-' + result.latency + 'ms') : (result.nodeName + '-' + result.latency + 'ms');
+                                const itemStr = result.host + ':' + result.port + '#' + nameWithLatency;
                                 selectedItems.push(itemStr);
                             }
                         });
@@ -3797,34 +3928,38 @@
                     });
                 }
                 
-                // 延迟测试函数
                 async function testLatency(host, port, signal) {
                     const startTime = Date.now();
                     const timeout = 5000;
+                    let colo = '';
                     
                     try {
                         const controller = new AbortController();
                         const timeoutId = setTimeout(() => controller.abort(), timeout);
                         
-                        // 合并外部信号和超时信号
                         if (signal) {
                             signal.addEventListener('abort', () => controller.abort());
                         }
                         
-                        // 使用fetch测试连接性
                         const testUrl = 'https://' + (host.startsWith('[') ? host : host) + ':' + port + '/cdn-cgi/trace';
                         const response = await fetch(testUrl, { 
-                            method: 'HEAD',
-                            signal: controller.signal,
-                            mode: 'no-cors'
+                            signal: controller.signal
                         });
                         
                         clearTimeout(timeoutId);
                         const latency = Date.now() - startTime;
                         
-                        return { success: true, latency: latency };
+                        if (response.ok) {
+                            const text = await response.text();
+                            const coloMatch = text.match(/colo=([A-Z]+)/);
+                            if (coloMatch) {
+                                colo = coloMatch[1];
+                            }
+                        }
+                        
+                        return { success: true, latency: latency, colo: colo };
                     } catch (error) {
-                        return { success: false, latency: -1, error: error.message };
+                        return { success: false, latency: -1, error: error.message, colo: '' };
                     }
                 }
             });
@@ -4463,15 +4598,12 @@
     }
 
     async function fetchAndParseNewIPs() {
-        
         const url = piu || "https://raw.githubusercontent.com/qwer-search/bestip/refs/heads/main/kejilandbestip.txt";
         try {
-            // 使用增强的 请求优选API 函数获取优选IP
             const urls = url.includes(',') ? url.split(',').map(u => u.trim()).filter(u => u) : [url];
-            const apiResults = await 请求优选API(urls, '443', 5000);
+            const apiResults = await fetchPreferredAPI(urls, '443', 5000);
             
             if (apiResults.length > 0) {
-                // 将 请求优选API 返回的格式转换为 fetchAndParseNewIPs 的返回格式
                 const results = [];
                 const regex = /^(\[[\da-fA-F:]+\]|[\d.]+|[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?)*)(?::(\d+))?(?:#(.+))?$/;
                 
@@ -4488,7 +4620,6 @@
                 return results;
             }
             
-            // 如果 请求优选API 失败，回退到原始方法
             const response = await fetch(url);
             if (!response.ok) return [];
             const text = await response.text();
@@ -5151,23 +5282,20 @@
         return domainRegex.test(domain);
     }
 
-    // 整理成数组 - 将文本内容整理成数组
-    async function 整理成数组(内容) {
-        var 替换后的内容 = 内容.replace(/[	"'\r\n]+/g, ',').replace(/,+/g, ',');
-        if (替换后的内容.charAt(0) == ',') 替换后的内容 = 替换后的内容.slice(1);
-        if (替换后的内容.charAt(替换后的内容.length - 1) == ',') 替换后的内容 = 替换后的内容.slice(0, 替换后的内容.length - 1);
-        const 地址数组 = 替换后的内容.split(',');
-        return 地址数组;
+    async function parseTextToArray(content) {
+        var processed = content.replace(/[	"'\r\n]+/g, ',').replace(/,+/g, ',');
+        if (processed.charAt(0) == ',') processed = processed.slice(1);
+        if (processed.charAt(processed.length - 1) == ',') processed = processed.slice(0, processed.length - 1);
+        return processed.split(',');
     }
 
-    // 请求优选API - 从远程API获取优选IP列表，支持多种格式（纯文本、CSV等）
-    async function 请求优选API(urls, 默认端口 = '443', 超时时间 = 3000) {
+    async function fetchPreferredAPI(urls, defaultPort = '443', timeout = 3000) {
         if (!urls?.length) return [];
         const results = new Set();
         await Promise.allSettled(urls.map(async (url) => {
             try {
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 超时时间);
+                const timeoutId = setTimeout(() => controller.abort(), timeout);
                 const response = await fetch(url, { signal: controller.signal });
                 clearTimeout(timeoutId);
                 let text = '';
@@ -5176,43 +5304,35 @@
                     const contentType = (response.headers.get('content-type') || '').toLowerCase();
                     const charset = contentType.match(/charset=([^\s;]+)/i)?.[1]?.toLowerCase() || '';
 
-                    // 根据 Content-Type 响应头判断编码优先级
-                    let decoders = ['utf-8', 'gb2312']; // 默认优先 UTF-8
+                    let decoders = ['utf-8', 'gb2312'];
                     if (charset.includes('gb') || charset.includes('gbk') || charset.includes('gb2312')) {
-                        decoders = ['gb2312', 'utf-8']; // 如果明确指定 GB 系编码，优先尝试 GB2312
+                        decoders = ['gb2312', 'utf-8'];
                     }
 
-                    // 尝试多种编码解码
                     let decodeSuccess = false;
                     for (const decoder of decoders) {
                         try {
                             const decoded = new TextDecoder(decoder).decode(buffer);
-                            // 验证解码结果的有效性
                             if (decoded && decoded.length > 0 && !decoded.includes('\ufffd')) {
                                 text = decoded;
                                 decodeSuccess = true;
                                 break;
                             } else if (decoded && decoded.length > 0) {
-                                // 如果有替换字符 (U+FFFD)，说明编码不匹配，继续尝试下一个编码
                                 continue;
                             }
                         } catch (e) {
-                            // 该编码解码失败，尝试下一个
                             continue;
                         }
                     }
 
-                    // 如果所有编码都失败或无效，尝试 response.text()
                     if (!decodeSuccess) {
                         text = await response.text();
                     }
 
-                    // 如果返回的是空或无效数据，返回
                     if (!text || text.trim().length === 0) {
                         return;
                     }
                 } catch (e) {
-                    console.error('Failed to decode response:', e);
                     return;
                 }
                 const lines = text.trim().split('\n').map(l => l.trim()).filter(l => l);
@@ -5229,7 +5349,7 @@
                             const colonIndex = hostPart.lastIndexOf(':');
                             hasPort = colonIndex > -1 && /^\d+$/.test(hostPart.substring(colonIndex + 1));
                         }
-                        const port = new URL(url).searchParams.get('port') || 默认端口;
+                        const port = new URL(url).searchParams.get('port') || defaultPort;
                         results.add(hasPort ? line : `${hostPart}:${port}${remark}`);
                     });
                 } else {
@@ -5250,7 +5370,7 @@
                         const ipIdx = headers.findIndex(h => h.includes('IP'));
                         const delayIdx = headers.findIndex(h => h.includes('延迟'));
                         const speedIdx = headers.findIndex(h => h.includes('下载速度'));
-                        const port = new URL(url).searchParams.get('port') || 默认端口;
+                        const port = new URL(url).searchParams.get('port') || defaultPort;
                         dataLines.forEach(line => {
                             const cols = line.split(',').map(c => c.trim());
                             const wrappedIP = IPV6_PATTERN.test(cols[ipIdx]) ? `[${cols[ipIdx]}]` : cols[ipIdx];
