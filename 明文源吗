@@ -3613,23 +3613,23 @@
                     const currentUrl = window.location.href;
                     const pathParts = window.location.pathname.split('/').filter(p => p);
                     const currentPath = pathParts.length > 0 ? pathParts[0] : '';
-                    const apiPath = currentPath ? `/${currentPath}/api/verify-preferred-api` : '/api/verify-preferred-api';
+                    const apiPath = currentPath ? '/' + currentPath + '/api/verify-preferred-api' : '/api/verify-preferred-api';
                     const apiEndpoint = new URL(apiPath, currentUrl.split('/sub')[0]).href;
                     
-                    const response = await fetch(`${apiEndpoint}?url=${encodeURIComponent(apiUrl)}&port=${encodeURIComponent(port)}`);
+                    const response = await fetch(apiEndpoint + '?url=' + encodeURIComponent(apiUrl) + '&port=' + encodeURIComponent(port));
                     const data = await response.json();
                     
                     if (data.success && data.data && data.data.length > 0) {
                         resultDiv.style.color = '#00ff00';
-                        resultDiv.innerHTML = `<div style="margin-bottom: 10px; font-weight: bold;">✅ 测试成功！获取到 ${data.count} 个IP地址：</div>` +
-                            `<div style="max-height: 150px; overflow-y: auto;">${data.data.map(ip => `<div style="padding: 2px 0;">${ip}</div>`).join('')}</div>`;
+                        resultDiv.innerHTML = '<div style="margin-bottom: 10px; font-weight: bold;">✅ 测试成功！获取到 ' + data.count + ' 个IP地址：</div>' +
+                            '<div style="max-height: 150px; overflow-y: auto;">' + data.data.map(function(ip) { return '<div style="padding: 2px 0;">' + ip + '</div>'; }).join('') + '</div>';
                     } else {
                         resultDiv.style.color = '#ffaa00';
-                        resultDiv.textContent = `⚠️ ${data.message || '未获取到IP地址'}`;
+                        resultDiv.textContent = '⚠️ ' + (data.message || '未获取到IP地址');
                     }
                 } catch (error) {
                     resultDiv.style.color = '#ff0000';
-                    resultDiv.textContent = `❌ 测试失败: ${error.message}`;
+                    resultDiv.textContent = '❌ 测试失败: ' + error.message;
                 }
             }
             
