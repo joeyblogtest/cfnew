@@ -1,72 +1,72 @@
-// @ts-nocheck
-import { connect } from 'cloudflare:sockets';
+    import { connect } from 'cloudflare:sockets';
 
-let at = '351c9981-04b6-4103-aa4b-864aa9c91469';
-let fallbackAddress = '';
-let fallbackPort = '443';
-let socks5Config = '';
-let customPreferredIPs = [];
-let customPreferredDomains = [];
-let enableSocksDowngrade = false;
-let disableNonTLS = false;
-let disablePreferred = false;
+    let at = '351c9981-04b6-4103-aa4b-864aa9c91469';
+    let fallbackAddress = '';
+    let fallbackPort = '443';
+    let socks5Config = '';
+    let customPreferredIPs = [];
+    let customPreferredDomains = [];
+    let enableSocksDowngrade = false;
+    let disableNonTLS = false;
+    let disablePreferred = false;
 
-let enableRegionMatching = true;
-let currentWorkerRegion = '';
-let manualWorkerRegion = '';
-let piu = '';
-let cp = '';
+    let enableRegionMatching = true;
+    let currentWorkerRegion = '';
+    let manualWorkerRegion = '';
+    let piu = '';
+    let cp = '';  
 
-let ev = true;
-let et = false;
-let ex = false;
-let tp = '';
+    let ev = true;   
+    let et = false; 
+    let ex = false;  
+    let tp = '';  
 
-let scu = 'https://url.v1.mk/sub';
-const remoteConfigUrl = 'https://raw.githubusercontent.com/byJoey/test/refs/heads/main/tist.ini';
+    let scu = 'https://url.v1.mk/sub';  
+    // 远程配置URL（硬编码）
+    const remoteConfigUrl = 'https://raw.githubusercontent.com/byJoey/test/refs/heads/main/tist.ini';
 
-let epd = false;
-let epi = true;
-let egi = true;
+    let epd = false;   // 优选域名默认关闭
+    let epi = true;       
+    let egi = true;          
 
-let kvStore = null;
-let kvConfig = {};
+    let kvStore = null;
+    let kvConfig = {};
 
-const regionMapping = {
-    'US': ['🇺🇸 美国', 'US', 'United States'],
-    'SG': ['🇸🇬 新加坡', 'SG', 'Singapore'],
-    'JP': ['🇯🇵 日本', 'JP', 'Japan'],
-    'HK': ['🇭🇰 香港', 'HK', 'Hong Kong'],
-    'KR': ['🇰🇷 韩国', 'KR', 'South Korea'],
-    'DE': ['🇩🇪 德国', 'DE', 'Germany'],
-    'SE': ['🇸🇪 瑞典', 'SE', 'Sweden'],
-    'NL': ['🇳🇱 荷兰', 'NL', 'Netherlands'],
-    'FI': ['🇫🇮 芬兰', 'FI', 'Finland'],
-    'GB': ['🇬🇧 英国', 'GB', 'United Kingdom'],
-    'Oracle': ['甲骨文', 'Oracle'],
-    'DigitalOcean': ['数码海', 'DigitalOcean'],
-    'Vultr': ['Vultr', 'Vultr'],
-    'Multacom': ['Multacom', 'Multacom']
-};
+    const regionMapping = {
+        'US': ['🇺🇸 美国', 'US', 'United States'],
+        'SG': ['🇸🇬 新加坡', 'SG', 'Singapore'],
+        'JP': ['🇯🇵 日本', 'JP', 'Japan'],
+        'HK': ['🇭🇰 香港', 'HK', 'Hong Kong'],
+        'KR': ['🇰🇷 韩国', 'KR', 'South Korea'],
+        'DE': ['🇩🇪 德国', 'DE', 'Germany'],
+        'SE': ['🇸🇪 瑞典', 'SE', 'Sweden'],
+        'NL': ['🇳🇱 荷兰', 'NL', 'Netherlands'],
+        'FI': ['🇫🇮 芬兰', 'FI', 'Finland'],
+        'GB': ['🇬🇧 英国', 'GB', 'United Kingdom'],
+        'Oracle': ['甲骨文', 'Oracle'],
+        'DigitalOcean': ['数码海', 'DigitalOcean'],
+        'Vultr': ['Vultr', 'Vultr'],
+        'Multacom': ['Multacom', 'Multacom']
+    };
 
-let backupIPs = [
-    { domain: 'ProxyIP.US.CMLiussss.net', region: 'US', regionCode: 'US', port: 443 },
-    { domain: 'ProxyIP.SG.CMLiussss.net', region: 'SG', regionCode: 'SG', port: 443 },
-    { domain: 'ProxyIP.JP.CMLiussss.net', region: 'JP', regionCode: 'JP', port: 443 },
-    { domain: 'ProxyIP.HK.CMLiussss.net', region: 'HK', regionCode: 'HK', port: 443 },
-    { domain: 'ProxyIP.KR.CMLiussss.net', region: 'KR', regionCode: 'KR', port: 443 },
-    { domain: 'ProxyIP.DE.CMLiussss.net', region: 'DE', regionCode: 'DE', port: 443 },
-    { domain: 'ProxyIP.SE.CMLiussss.net', region: 'SE', regionCode: 'SE', port: 443 },
-    { domain: 'ProxyIP.NL.CMLiussss.net', region: 'NL', regionCode: 'NL', port: 443 },
-    { domain: 'ProxyIP.FI.CMLiussss.net', region: 'FI', regionCode: 'FI', port: 443 },
-    { domain: 'ProxyIP.GB.CMLiussss.net', region: 'GB', regionCode: 'GB', port: 443 },
+    let backupIPs = [
+        { domain: 'ProxyIP.US.CMLiussss.net', region: 'US', regionCode: 'US', port: 443 },
+        { domain: 'ProxyIP.SG.CMLiussss.net', region: 'SG', regionCode: 'SG', port: 443 },
+        { domain: 'ProxyIP.JP.CMLiussss.net', region: 'JP', regionCode: 'JP', port: 443 },
+        { domain: 'ProxyIP.HK.CMLiussss.net', region: 'HK', regionCode: 'HK', port: 443 },
+        { domain: 'ProxyIP.KR.CMLiussss.net', region: 'KR', regionCode: 'KR', port: 443 },
+        { domain: 'ProxyIP.DE.CMLiussss.net', region: 'DE', regionCode: 'DE', port: 443 },
+        { domain: 'ProxyIP.SE.CMLiussss.net', region: 'SE', regionCode: 'SE', port: 443 },
+        { domain: 'ProxyIP.NL.CMLiussss.net', region: 'NL', regionCode: 'NL', port: 443 },
+        { domain: 'ProxyIP.FI.CMLiussss.net', region: 'FI', regionCode: 'FI', port: 443 },
+        { domain: 'ProxyIP.GB.CMLiussss.net', region: 'GB', regionCode: 'GB', port: 443 },
         { domain: 'ProxyIP.Oracle.cmliussss.net', region: 'Oracle', regionCode: 'Oracle', port: 443 },
         { domain: 'ProxyIP.DigitalOcean.CMLiussss.net', region: 'DigitalOcean', regionCode: 'DigitalOcean', port: 443 },
         { domain: 'ProxyIP.Vultr.CMLiussss.net', region: 'Vultr', regionCode: 'Vultr', port: 443 },
         { domain: 'ProxyIP.Multacom.CMLiussss.net', region: 'Multacom', regionCode: 'Multacom', port: 443 }
     ];
 
-const directDomains = [
+    const directDomains = [
         { name: "cloudflare.182682.xyz", domain: "cloudflare.182682.xyz" }, { name: "speed.marisalnc.com", domain: "speed.marisalnc.com" },
         { domain: "freeyx.cloudflare88.eu.org" }, { domain: "bestcf.top" }, { domain: "cdn.2020111.xyz" }, { domain: "cfip.cfcdn.vip" },
         { domain: "cf.0sm.com" }, { domain: "cf.090227.xyz" }, { domain: "cf.zhetengsha.eu.org" }, { domain: "cloudflare.9jy.cc" },
@@ -75,33 +75,33 @@ const directDomains = [
         { domain: "cdn.tzpro.xyz" }, { domain: "cf.877771.xyz" }, { domain: "xn--b6gac.eu.org" }
     ];
 
-const E_INVALID_DATA = atob('aW52YWxpZCBkYXRh');
-const E_INVALID_USER = atob('aW52YWxpZCB1c2Vy');
-const E_UNSUPPORTED_CMD = atob('Y29tbWFuZCBpcyBub3Qgc3VwcG9ydGVk');
-const E_UDP_DNS_ONLY = atob('VURQIHByb3h5IG9ubHkgZW5hYmxlIGZvciBETlMgd2hpY2ggaXMgcG9ydCA1Mw==');
-const E_INVALID_ADDR_TYPE = atob('aW52YWxpZCBhZGRyZXNzVHlwZQ==');
-const E_EMPTY_ADDR = atob('YWRkcmVzc1ZhbHVlIGlzIGVtcHR5');
-const E_WS_NOT_OPEN = atob('d2ViU29ja2V0LmVhZHlTdGF0ZSBpcyBub3Qgb3Blbg==');
-const E_INVALID_ID_STR = atob('U3RyaW5naWZpZWQgaWRlbnRpZmllciBpcyBpbnZhbGlk');
-const E_INVALID_SOCKS_ADDR = atob('SW52YWxpZCBTT0NLUyBhZGRyZXNzIGZvcm1hdA==');
-const E_SOCKS_NO_METHOD = atob('bm8gYWNjZXB0YWJsZSBtZXRob2Rz');
-const E_SOCKS_AUTH_NEEDED = atob('c29ja3Mgc2VydmVyIG5lZWRzIGF1dGg=');
-const E_SOCKS_AUTH_FAIL = atob('ZmFpbCB0byBhdXRoIHNvY2tzIHNlcnZlcg==');
-const E_SOCKS_CONN_FAIL = atob('ZmFpbCB0byBvcGVuIHNvY2tzIGNvbm5lY3Rpb24=');
+    const E_INVALID_DATA = atob('aW52YWxpZCBkYXRh');
+    const E_INVALID_USER = atob('aW52YWxpZCB1c2Vy');
+    const E_UNSUPPORTED_CMD = atob('Y29tbWFuZCBpcyBub3Qgc3VwcG9ydGVk');
+    const E_UDP_DNS_ONLY = atob('VURQIHByb3h5IG9ubHkgZW5hYmxlIGZvciBETlMgd2hpY2ggaXMgcG9ydCA1Mw==');
+    const E_INVALID_ADDR_TYPE = atob('aW52YWxpZCBhZGRyZXNzVHlwZQ==');
+    const E_EMPTY_ADDR = atob('YWRkcmVzc1ZhbHVlIGlzIGVtcHR5');
+    const E_WS_NOT_OPEN = atob('d2ViU29ja2V0LmVhZHlTdGF0ZSBpcyBub3Qgb3Blbg==');
+    const E_INVALID_ID_STR = atob('U3RyaW5naWZpZWQgaWRlbnRpZmllciBpcyBpbnZhbGlk');
+    const E_INVALID_SOCKS_ADDR = atob('SW52YWxpZCBTT0NLUyBhZGRyZXNzIGZvcm1hdA==');
+    const E_SOCKS_NO_METHOD = atob('bm8gYWNjZXB0YWJsZSBtZXRob2Rz');
+    const E_SOCKS_AUTH_NEEDED = atob('c29ja3Mgc2VydmVyIG5lZWRzIGF1dGg=');
+    const E_SOCKS_AUTH_FAIL = atob('ZmFpbCB0byBhdXRoIHNvY2tzIHNlcnZlcg==');
+    const E_SOCKS_CONN_FAIL = atob('ZmFpbCB0byBvcGVuIHNvY2tzIGNvbm5lY3Rpb24=');
 
-let parsedSocks5Config = {};
-let isSocksEnabled = false;
+    let parsedSocks5Config = {};
+    let isSocksEnabled = false;
 
-const ADDRESS_TYPE_IPV4 = 1;
-const ADDRESS_TYPE_URL = 2;
-const ADDRESS_TYPE_IPV6 = 3;
+    const ADDRESS_TYPE_IPV4 = 1;
+    const ADDRESS_TYPE_URL = 2;
+    const ADDRESS_TYPE_IPV6 = 3;
 
-function isValidFormat(str) {
+    function isValidFormat(str) {
         const userRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
         return userRegex.test(str);
     }
 
-function isValidIP(ip) {
+    function isValidIP(ip) {
         const ipv4Regex = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
         if (ipv4Regex.test(ip)) return true;
         
@@ -114,7 +114,7 @@ function isValidIP(ip) {
         return false;
     }
 
-async function initKVStore(env) {
+    async function initKVStore(env) {
         
         if (env.C) {
             try {
@@ -127,7 +127,7 @@ async function initKVStore(env) {
         }
     }
 
-async function loadKVConfig() {
+    async function loadKVConfig() {
         
         if (!kvStore) {
             return;
@@ -145,7 +145,7 @@ async function loadKVConfig() {
         }
     }
 
-async function saveKVConfig() {
+    async function saveKVConfig() {
         if (!kvStore) {
             return;
         }
@@ -158,7 +158,7 @@ async function saveKVConfig() {
         }
     }
 
-function getConfigValue(key, defaultValue = '') {
+    function getConfigValue(key, defaultValue = '') {
         
         if (kvConfig[key] !== undefined) {
             return kvConfig[key];
@@ -166,12 +166,12 @@ function getConfigValue(key, defaultValue = '') {
         return defaultValue;
     }
 
-async function setConfigValue(key, value) {
+    async function setConfigValue(key, value) {
         kvConfig[key] = value;
         await saveKVConfig();
     }
 
-async function detectWorkerRegion(request) {
+    async function detectWorkerRegion(request) {
         try {
             const cfCountry = request.cf?.country;
             
@@ -196,7 +196,7 @@ async function detectWorkerRegion(request) {
         }
     }
 
-async function checkIPAvailability(domain, port = 443, timeout = 2000) {
+    async function checkIPAvailability(domain, port = 443, timeout = 2000) {
         try {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), timeout);
@@ -216,7 +216,7 @@ async function checkIPAvailability(domain, port = 443, timeout = 2000) {
         }
     }
 
-async function getBestBackupIP(workerRegion = '') {
+    async function getBestBackupIP(workerRegion = '') {
         
         if (backupIPs.length === 0) {
             return null;
@@ -236,7 +236,7 @@ async function getBestBackupIP(workerRegion = '') {
         return selectedIP;
     }
 
-function getNearbyRegions(region) {
+    function getNearbyRegions(region) {
         const nearbyMap = {
             'US': ['SG', 'JP', 'HK', 'KR'], 
             'SG': ['JP', 'HK', 'KR', 'US'], 
@@ -253,14 +253,14 @@ function getNearbyRegions(region) {
         return nearbyMap[region] || [];
     }
 
-function getAllRegionsByPriority(region) {
+    function getAllRegionsByPriority(region) {
         const nearbyRegions = getNearbyRegions(region);
         const allRegions = ['US', 'SG', 'JP', 'HK', 'KR', 'DE', 'SE', 'NL', 'FI', 'GB'];
         
         return [region, ...nearbyRegions, ...allRegions.filter(r => r !== region && !nearbyRegions.includes(r))];
     }
 
-function getSmartRegionSelection(workerRegion, availableIPs) {
+    function getSmartRegionSelection(workerRegion, availableIPs) {
         
         if (!enableRegionMatching || !workerRegion) {
             return availableIPs;
@@ -278,7 +278,7 @@ function getSmartRegionSelection(workerRegion, availableIPs) {
         return sortedIPs;
     }
 
-function parseAddressAndPort(input) {
+    function parseAddressAndPort(input) {
         if (input.includes('[') && input.includes(']')) {
             const match = input.match(/^\[([^\]]+)\](?::(\d+))?$/);
             if (match) {
@@ -303,7 +303,7 @@ function parseAddressAndPort(input) {
         return { address: input, port: null };
     }
 
-export default {
+    export default {
         async fetch(request, env, ctx) {
             try {
                 
@@ -1208,31 +1208,11 @@ export default {
         },
     };
 
-function generateQuantumultConfig(links) {
+    function generateQuantumultConfig(links) {
         return btoa(links.join('\n'));
     }
 
-async function generateClashConfig(links) {
-        return btoa(links.join('\n'));
-    }
-
-function generateSurgeConfig(links) {
-        return btoa(links.join('\n'));
-    }
-
-function generateSSConfig(links) {
-        return btoa(links.join('\n'));
-    }
-
-function generateV2RayConfig(links) {
-        return btoa(links.join('\n'));
-    }
-
-function generateLoonConfig(links) {
-        return btoa(links.join('\n'));
-    }
-
-async function handleSubscriptionRequest(request, user, url = null) {
+    async function handleSubscriptionRequest(request, user, url = null) {
         if (!url) url = new URL(request.url);
         
         const finalLinks = [];
@@ -1398,7 +1378,7 @@ async function handleSubscriptionRequest(request, user, url = null) {
         });
     }
 
-function generateLinksFromSource(list, user, workerDomain) {
+    function generateLinksFromSource(list, user, workerDomain) {
         
         const CF_HTTP_PORTS = [80, 8080, 8880, 2052, 2082, 2086, 2095];
         const CF_HTTPS_PORTS = [443, 2053, 2083, 2087, 2096, 8443];
@@ -1475,7 +1455,7 @@ function generateLinksFromSource(list, user, workerDomain) {
         return links;
     }
 
-async function generateTrojanLinksFromSource(list, user, workerDomain) {
+    async function generateTrojanLinksFromSource(list, user, workerDomain) {
         
         const CF_HTTP_PORTS = [80, 8080, 8880, 2052, 2082, 2086, 2095];
         const CF_HTTPS_PORTS = [443, 2053, 2083, 2087, 2096, 8443];
@@ -1546,7 +1526,7 @@ async function generateTrojanLinksFromSource(list, user, workerDomain) {
         return links;
     }
 
-async function fetchDynamicIPs() {
+    async function fetchDynamicIPs() {
         const v4Url1 = "https://www.wetest.vip/page/cloudflare/address_v4.html";
         const v6Url1 = "https://www.wetest.vip/page/cloudflare/address_v6.html";
         let results = [];
@@ -1594,7 +1574,7 @@ async function fetchDynamicIPs() {
                 return [];
             }
 
-async function fetchAndParseWetest(url) {
+    async function fetchAndParseWetest(url) {
         try {
             const response = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
             if (!response.ok) {
@@ -1628,7 +1608,7 @@ async function fetchAndParseWetest(url) {
         }
     }
 
-async function handleWsRequest(request) {
+    async function handleWsRequest(request) {
         // 检测并设置当前Worker地区，确保WebSocket请求能正确进行就近匹配
         if (!currentWorkerRegion || currentWorkerRegion === '') {
             if (manualWorkerRegion && manualWorkerRegion.trim()) {
@@ -1696,7 +1676,7 @@ async function handleWsRequest(request) {
         return new Response(null, { status: 101, webSocket: clientSock });
     }
 
-async function forwardTCP(addrType, host, portNum, rawData, ws, respHeader, remoteConnWrapper) {
+    async function forwardTCP(addrType, host, portNum, rawData, ws, respHeader, remoteConnWrapper) {
         async function connectAndSend(address, port, useSocks = false) {
             const remoteSock = useSocks ?
                 await establishSocksConnection(addrType, address, port) :
@@ -1766,7 +1746,7 @@ async function forwardTCP(addrType, host, portNum, rawData, ws, respHeader, remo
         }
     }
 
-function parseWsPacketHeader(chunk, token) {
+    function parseWsPacketHeader(chunk, token) {
         if (chunk.byteLength < 24) return { hasError: true, message: E_INVALID_DATA };
         const version = new Uint8Array(chunk.slice(0, 1));
         if (formatIdentifier(new Uint8Array(chunk.slice(1, 17))) !== token) return { hasError: true, message: E_INVALID_USER };
@@ -1788,7 +1768,7 @@ function parseWsPacketHeader(chunk, token) {
         return { hasError: false, addressType, port, hostname, isUDP, rawIndex: addrValIdx + addrLen, version };
     }
 
-function makeReadableStream(socket, earlyDataHeader) {
+    function makeReadableStream(socket, earlyDataHeader) {
         let cancelled = false;
         return new ReadableStream({
             start(controller) {
@@ -1802,7 +1782,7 @@ function makeReadableStream(socket, earlyDataHeader) {
         });
     }
 
-async function connectStreams(remoteSocket, webSocket, headerData, retryFunc) {
+    async function connectStreams(remoteSocket, webSocket, headerData, retryFunc) {
         let header = headerData, hasData = false;
         await remoteSocket.readable.pipeTo(
             new WritableStream({
@@ -1818,7 +1798,7 @@ async function connectStreams(remoteSocket, webSocket, headerData, retryFunc) {
         if (!hasData && retryFunc) retryFunc();
     }
 
-async function forwardUDP(udpChunk, webSocket, respHeader) {
+    async function forwardUDP(udpChunk, webSocket, respHeader) {
         try {
             const tcpSocket = connect({ hostname: '8.8.4.4', port: 53 });
             let header = respHeader;
@@ -1836,7 +1816,7 @@ async function forwardUDP(udpChunk, webSocket, respHeader) {
         } catch (error) { }
     }
 
-async function establishSocksConnection(addrType, address, port) {
+    async function establishSocksConnection(addrType, address, port) {
         const { username, password, hostname, socksPort } = parsedSocks5Config;
         const socket = connect({ hostname, port: socksPort });
         const writer = socket.writable.getWriter();
@@ -1866,7 +1846,7 @@ async function establishSocksConnection(addrType, address, port) {
         return socket;
     }
 
-function parseSocksConfig(address) {
+    function parseSocksConfig(address) {
         let [latter, former] = address.split("@").reverse(); 
         let username, password, hostname, socksPort;
         
@@ -1886,7 +1866,7 @@ function parseSocksConfig(address) {
         return { username, password, hostname, socksPort };
     }
 
-async function handleSubscriptionPage(request, user = null) {
+    async function handleSubscriptionPage(request, user = null) {
         if (!user) user = at;
         
         const url = new URL(request.url);
@@ -2542,7 +2522,7 @@ async function handleSubscriptionPage(request, user = null) {
                                 </div>
                                 <div style="width: 100px;">
                                     <label style="display: block; margin-bottom: 5px; color: #00ff00; font-size: 0.9rem;">${t.latencyTestPort}</label>
-                                    <input type="number" id="latencyTestPort" value="443" min="1" max="65535" style="width: 100%; padding: 10px; background: rgba(0, 0, 0, 0.8); border: 1px solid #00ff00; color: #00ff00; font-family: 'Courier New', monospace; font-size: 13px;">
+                                    <input type="number" id="latencyTestPort" value="80" min="1" max="65535" style="width: 100%; padding: 10px; background: rgba(0, 0, 0, 0.8); border: 1px solid #00ff00; color: #00ff00; font-family: 'Courier New', monospace; font-size: 13px;">
                                 </div>
                                 <div id="randomCountDiv" style="width: 100px; display: none;">
                                     <label style="display: block; margin-bottom: 5px; color: #00ff00; font-size: 0.9rem;">${t.randomCount}</label>
@@ -3948,80 +3928,36 @@ async function handleSubscriptionPage(request, user = null) {
                     });
                 }
                 
-                function ipToHex(ip) {
-                    return ip.split('.').map(num => {
-                        const hex = parseInt(num).toString(16);
-                        return hex.padStart(2, '0');
-                    }).join('');
-                }
-                
-                function isIPv4(str) {
-                    const ipv4Regex = /^(\d{1,3}\.){3}\d{1,3}$/;
-                    return ipv4Regex.test(str);
-                }
-                
                 async function testLatency(host, port, signal) {
+                    const startTime = Date.now();
+                    const timeout = 5000;
+                    let colo = '';
+                    
                     try {
                         const controller = new AbortController();
-                        const timeoutId = setTimeout(() => controller.abort(), 5000);
+                        const timeoutId = setTimeout(() => controller.abort(), timeout);
                         
                         if (signal) {
                             signal.addEventListener('abort', () => controller.abort());
                         }
                         
-                        let testUrl;
-                        if (isIPv4(host)) {
-                            const hexIP = ipToHex(host);
-                            testUrl = 'http://' + hexIP + '.nip.lfree.org/cdn-cgi/trace?_t=' + Date.now();
-                        } else {
-                            testUrl = 'http://' + host + '/cdn-cgi/trace?_t=' + Date.now();
-                        }
+                        const testUrl = 'http://' + host + ':' + port + '/cdn-cgi/trace';
+                        const response = await fetch(testUrl, { 
+                            signal: controller.signal
+                        });
                         
-                        const times = [];
-                        let colo = '';
+                        clearTimeout(timeoutId);
+                        const latency = Date.now() - startTime;
                         
-                        for (let i = 0; i < 3; i++) {
-                            const start = performance.now();
-                            try {
-                                const response = await fetch(testUrl, { 
-                                    signal: controller.signal,
-                                    mode: 'cors',
-                                    cache: 'no-store',
-                                    credentials: 'omit'
-                                });
-                                if (response.ok) {
-                                    const end = performance.now();
-                                    const time = end - start;
-                                    if (i > 0) {
-                                        times.push(time);
-                                    }
-                                    if (i === 0) {
-                                        const text = await response.text();
-                                        const coloMatch = text.match(/colo=([A-Z]+)/);
-                                        if (coloMatch) colo = coloMatch[1];
-                                    }
-                                } else {
-                                    if (i === 0) {
-                                        clearTimeout(timeoutId);
-                                        return { success: false, latency: -1, colo: '' };
-                                    }
-                                }
-                            } catch (error) {
-                                if (i === 0) {
-                                    clearTimeout(timeoutId);
-                                    return { success: false, latency: -1, error: error.message, colo: '' };
-                                }
+                        if (response.ok) {
+                            const text = await response.text();
+                            const coloMatch = text.match(/colo=([A-Z]+)/);
+                            if (coloMatch) {
+                                colo = coloMatch[1];
                             }
                         }
                         
-                        clearTimeout(timeoutId);
-                        
-                        if (times.length > 0) {
-                            const avgTime = times.reduce((a, b) => a + b, 0) / times.length;
-                            return { success: true, latency: Math.round(avgTime), colo: colo };
-                        }
-                        
-                        return { success: false, latency: -1, colo: '' };
+                        return { success: true, latency: latency, colo: colo };
                     } catch (error) {
                         return { success: false, latency: -1, error: error.message, colo: '' };
                     }
@@ -4037,7 +3973,7 @@ async function handleSubscriptionPage(request, user = null) {
         });
     }
 
-async function parseTrojanHeader(buffer, ut) {
+    async function parseTrojanHeader(buffer, ut) {
         
         const passwordToHash = tp || ut;
         const sha224Password = await sha224Hash(passwordToHash);
@@ -4137,7 +4073,7 @@ async function parseTrojanHeader(buffer, ut) {
         };
     }
 
-async function sha224Hash(text) {
+    async function sha224Hash(text) {
         const encoder = new TextEncoder();
         const data = encoder.encode(text);
         
@@ -4223,22 +4159,22 @@ async function sha224Hash(text) {
         return result.join('');
     }
 
-function rightRotate(value, amount) {
+    function rightRotate(value, amount) {
         return (value >>> amount) | (value << (32 - amount));
     }
 
-let ACTIVE_CONNECTIONS = 0;
-const XHTTP_BUFFER_SIZE = 128 * 1024;
-const CONNECT_TIMEOUT_MS = 5000;
-const IDLE_TIMEOUT_MS = 45000;
-const MAX_RETRIES = 2;
-const MAX_CONCURRENT = 32;
+    let ACTIVE_CONNECTIONS = 0;
+    const XHTTP_BUFFER_SIZE = 128 * 1024;
+    const CONNECT_TIMEOUT_MS = 5000;
+    const IDLE_TIMEOUT_MS = 45000;
+    const MAX_RETRIES = 2;
+    const MAX_CONCURRENT = 32;
 
-function xhttp_sleep(ms) {
+    function xhttp_sleep(ms) {
         return new Promise((r) => setTimeout(r, ms));
     }
 
-function validate_uuid_xhttp(id, uuid) {
+    function validate_uuid_xhttp(id, uuid) {
         for (let index = 0; index < 16; index++) {
             if (id[index] !== uuid[index]) {
                 return false;
@@ -4263,7 +4199,7 @@ function validate_uuid_xhttp(id, uuid) {
         }
     }
 
-function concat_typed_arrays(first, ...args) {
+    function concat_typed_arrays(first, ...args) {
         let len = first.length;
         for (let a of args) {
             len += a.length;
@@ -4278,7 +4214,7 @@ function concat_typed_arrays(first, ...args) {
         return r;
     }
 
-function parse_uuid_xhttp(uuid) {
+    function parse_uuid_xhttp(uuid) {
         uuid = uuid.replaceAll('-', '');
         const r = [];
         for (let index = 0; index < 16; index++) {
@@ -4288,11 +4224,11 @@ function parse_uuid_xhttp(uuid) {
         return r;
     }
 
-function get_xhttp_buffer(size) {
+    function get_xhttp_buffer(size) {
         return new Uint8Array(new ArrayBuffer(size || XHTTP_BUFFER_SIZE));
     }
 
-async function read_xhttp_header(readable, uuid_str) {
+    async function read_xhttp_header(readable, uuid_str) {
         const reader = readable.getReader({ mode: 'byob' });
 
         try {
@@ -4394,7 +4330,7 @@ async function read_xhttp_header(readable, uuid_str) {
         }
     }
 
-async function upload_to_remote_xhttp(counter, writer, httpx) {
+    async function upload_to_remote_xhttp(counter, writer, httpx) {
         async function inner_upload(d) {
             if (!d || d.length === 0) {
                 return;
@@ -4428,7 +4364,7 @@ async function upload_to_remote_xhttp(counter, writer, httpx) {
         }
     }
 
-function create_xhttp_uploader(httpx, writable) {
+    function create_xhttp_uploader(httpx, writable) {
         const counter = new XhttpCounter();
         const writer = writable.getWriter();
         
@@ -4455,7 +4391,7 @@ function create_xhttp_uploader(httpx, writable) {
         };
     }
 
-function create_xhttp_downloader(resp, remote_readable) {
+    function create_xhttp_downloader(resp, remote_readable) {
         const counter = new XhttpCounter();
         let stream;
 
@@ -4534,7 +4470,7 @@ function create_xhttp_downloader(resp, remote_readable) {
         };
     }
 
-async function connect_to_remote_xhttp(httpx, ...remotes) {
+    async function connect_to_remote_xhttp(httpx, ...remotes) {
         let attempt = 0;
         let lastErr;
         
@@ -4576,7 +4512,7 @@ async function connect_to_remote_xhttp(httpx, ...remotes) {
         return null;
     }
 
-async function handle_xhttp_client(body, uuid) {
+    async function handle_xhttp_client(body, uuid) {
         if (ACTIVE_CONNECTIONS >= MAX_CONCURRENT) {
             return new Response('Too many connections', { status: 429 });
         }
@@ -4638,7 +4574,7 @@ async function handle_xhttp_client(body, uuid) {
         }
     }
 
-async function handleXhttpPost(request) {
+    async function handleXhttpPost(request) {
         try {
             return await handle_xhttp_client(request.body, at);
         } catch (err) {
@@ -4646,22 +4582,22 @@ async function handleXhttpPost(request) {
         }
     }
 
-function base64ToArray(b64Str) {
+    function base64ToArray(b64Str) {
         if (!b64Str) return { error: null };
         try { b64Str = b64Str.replace(/-/g, '+').replace(/_/g, '/'); return { earlyData: Uint8Array.from(atob(b64Str), (c) => c.charCodeAt(0)).buffer, error: null }; } 
         catch (error) { return { error }; }
     }
 
-function closeSocketQuietly(socket) { try { if (socket.readyState === 1 || socket.readyState === 2) socket.close(); } catch (error) {} }
+    function closeSocketQuietly(socket) { try { if (socket.readyState === 1 || socket.readyState === 2) socket.close(); } catch (error) {} }
 
-const hexTable = Array.from({ length: 256 }, (v, i) => (i + 256).toString(16).slice(1));
-function formatIdentifier(arr, offset = 0) {
+    const hexTable = Array.from({ length: 256 }, (v, i) => (i + 256).toString(16).slice(1));
+    function formatIdentifier(arr, offset = 0) {
         const id = (hexTable[arr[offset]]+hexTable[arr[offset+1]]+hexTable[arr[offset+2]]+hexTable[arr[offset+3]]+"-"+hexTable[arr[offset+4]]+hexTable[arr[offset+5]]+"-"+hexTable[arr[offset+6]]+hexTable[arr[offset+7]]+"-"+hexTable[arr[offset+8]]+hexTable[arr[offset+9]]+"-"+hexTable[arr[offset+10]]+hexTable[arr[offset+11]]+hexTable[arr[offset+12]]+hexTable[arr[offset+13]]+hexTable[arr[offset+14]]+hexTable[arr[offset+15]]).toLowerCase();
         if (!isValidFormat(id)) throw new TypeError(E_INVALID_ID_STR);
         return id;
     }
 
-async function fetchAndParseNewIPs() {
+    async function fetchAndParseNewIPs() {
         const url = piu || "https://raw.githubusercontent.com/qwer-search/bestip/refs/heads/main/kejilandbestip.txt";
         try {
             const urls = url.includes(',') ? url.split(',').map(u => u.trim()).filter(u => u) : [url];
@@ -4709,7 +4645,7 @@ async function fetchAndParseNewIPs() {
         }
     }
 
-function generateLinksFromNewIPs(list, user, workerDomain) {
+    function generateLinksFromNewIPs(list, user, workerDomain) {
         
         const CF_HTTP_PORTS = [80, 8080, 8880, 2052, 2082, 2086, 2095];
         const CF_HTTPS_PORTS = [443, 2053, 2083, 2087, 2096, 8443];
@@ -4744,7 +4680,7 @@ function generateLinksFromNewIPs(list, user, workerDomain) {
         return links;
     }
 
-function generateXhttpLinksFromSource(list, user, workerDomain) {
+    function generateXhttpLinksFromSource(list, user, workerDomain) {
         const links = [];
         const nodePath = user.substring(0, 8);
         
@@ -4775,7 +4711,7 @@ function generateXhttpLinksFromSource(list, user, workerDomain) {
         return links;
     }
 
-async function generateTrojanLinksFromNewIPs(list, user, workerDomain) {
+    async function generateTrojanLinksFromNewIPs(list, user, workerDomain) {
         
         const CF_HTTP_PORTS = [80, 8080, 8880, 2052, 2082, 2086, 2095];
         const CF_HTTPS_PORTS = [443, 2053, 2083, 2087, 2096, 8443];
@@ -4811,7 +4747,7 @@ async function generateTrojanLinksFromNewIPs(list, user, workerDomain) {
         return links;
     }
 
-async function handleConfigAPI(request) {
+    async function handleConfigAPI(request) {
         if (request.method === 'GET') {
             
             if (!kvStore) {
@@ -4935,7 +4871,7 @@ async function handleConfigAPI(request) {
         });
     }
 
-async function handlePreferredIPsAPI(request) {
+    async function handlePreferredIPsAPI(request) {
         
         if (!kvStore) {
             return new Response(JSON.stringify({
@@ -5142,7 +5078,7 @@ async function handlePreferredIPsAPI(request) {
         }
     }
 
-function updateConfigVariables() {
+    function updateConfigVariables() {
         const manualRegion = getConfigValue('wk', '');
         if (manualRegion && manualRegion.trim()) {
             manualWorkerRegion = manualRegion.trim().toUpperCase();
@@ -5250,7 +5186,7 @@ function updateConfigVariables() {
         }
     }
 
-function updateCustomPreferredFromYx() {
+    function updateCustomPreferredFromYx() {
         const yxValue = getConfigValue('yx', '');
         if (yxValue) {
             try {
@@ -5298,7 +5234,7 @@ function updateCustomPreferredFromYx() {
         }
     }
 
-function parseYxToArray(yxValue) {
+    function parseYxToArray(yxValue) {
         if (!yxValue || !yxValue.trim()) return [];
         
         const items = yxValue.split(',').map(item => item.trim()).filter(item => item);
@@ -5332,7 +5268,7 @@ function parseYxToArray(yxValue) {
         return result;
     }
 
-function arrayToYx(array) {
+    function arrayToYx(array) {
         if (!array || array.length === 0) return '';
         
         return array.map(item => {
@@ -5341,19 +5277,19 @@ function arrayToYx(array) {
         }).join(',');
     }
 
-function isValidDomain(domain) {
+    function isValidDomain(domain) {
         const domainRegex = /^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$/;
         return domainRegex.test(domain);
     }
 
-async function parseTextToArray(content) {
+    async function parseTextToArray(content) {
         var processed = content.replace(/[	"'\r\n]+/g, ',').replace(/,+/g, ',');
         if (processed.charAt(0) == ',') processed = processed.slice(1);
         if (processed.charAt(processed.length - 1) == ',') processed = processed.slice(0, processed.length - 1);
         return processed.split(',');
     }
 
-async function fetchPreferredAPI(urls, defaultPort = '443', timeout = 3000) {
+    async function fetchPreferredAPI(urls, defaultPort = '443', timeout = 3000) {
         if (!urls?.length) return [];
         const results = new Set();
         await Promise.allSettled(urls.map(async (url) => {
