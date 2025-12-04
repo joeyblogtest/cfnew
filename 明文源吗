@@ -3930,21 +3930,9 @@
                     });
                 }
                 
-                function ipToHex(ip) {
-                    const parts = ip.split('.');
-                    if (parts.length !== 4) return null;
-                    let hex = '';
-                    for (let i = 0; i < 4; i++) {
-                        const num = parseInt(parts[i]);
-                        if (isNaN(num) || num < 0 || num > 255) return null;
-                        hex += num.toString(16).padStart(2, '0');
-                    }
-                    return hex;
-                }
-                
                 async function testLatency(host, port, signal) {
                     const startTime = Date.now();
-                    const timeout = 8000;
+                    const timeout = 10000;
                     let colo = '';
                     let testUrl = '';
                     
@@ -3956,12 +3944,10 @@
                             signal.addEventListener('abort', () => controller.abort());
                         }
                         
-                        const cleanHost = host.replace(/^\\[|\\]$/g, '');
-                        const hexIP = ipToHex(cleanHost);
-                        const testDomain = hexIP ? (hexIP + '.nip.lfree.org') : (cleanHost + '.nip.lfree.org');
-                        testUrl = 'https://' + testDomain + ':' + port + '/';
+                        const safeHost = host.includes(':') && !host.startsWith('[') ? '[' + host + ']' : host;
+                        testUrl = 'https://' + safeHost + ':' + port + '/cdn-cgi/trace';
                         
-                        console.log('[LatencyTest] Testing:', testUrl, 'Original:', host + ':' + port, 'HexIP:', hexIP);
+                        console.log('[LatencyTest] Testing:', testUrl);
                         
                         const response = await fetch(testUrl, { 
                             signal: controller.signal
@@ -3973,16 +3959,16 @@
                         console.log('[LatencyTest] Response:', response.status, response.statusText);
                         
                         if (!response.ok) {
-                            return { success: false, latency: latency, error: 'HTTP ' + response.status + ' ' + response.statusText, colo: '', testUrl: testUrl };
+                            return { success: false, latency: latency, error: 'HTTP ' + response.status, colo: '', testUrl: testUrl };
                         }
                         
                         try {
                             const text = await response.text();
-                            console.log('[LatencyTest] Response body:', text.substring(0, 200));
-                            const data = JSON.parse(text);
-                            if (data.colo) {
-                                colo = data.colo;
+                            const coloMatch = text.match(/colo=([A-Z]+)/);
+                            if (coloMatch) {
+                                colo = coloMatch[1];
                             }
+                            console.log('[LatencyTest] Colo:', colo);
                         } catch (e) {
                             console.log('[LatencyTest] Parse error:', e.message);
                         }
