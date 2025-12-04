@@ -1928,6 +1928,21 @@
                     customIP: '自定义ProxyIP (p):',
                     preferredIPs: '优选IP列表 (yx):',
                     preferredIPsURL: '优选IP来源URL (yxURL):',
+                    latencyTest: '延迟测试',
+                    latencyTestIP: '测试IP/域名:',
+                    latencyTestIPPlaceholder: '输入IP或域名，多个用逗号分隔',
+                    latencyTestPort: '端口:',
+                    startTest: '开始测试',
+                    stopTest: '停止测试',
+                    testResult: '测试结果:',
+                    addToYx: '添加到优选列表',
+                    addSelectedToYx: '添加选中项到优选列表',
+                    selectAll: '全选',
+                    deselectAll: '取消全选',
+                    testingInProgress: '测试中...',
+                    testComplete: '测试完成',
+                    latencyMs: '延迟',
+                    timeout: '超时',
                     socks5Config: 'SOCKS5配置 (s):',
                     customHomepage: '自定义首页URL (homepage):',
                     customHomepagePlaceholder: '例如: https://example.com',
@@ -2035,6 +2050,21 @@
                     customIP: 'ProxyIP سفارشی (p):',
                     preferredIPs: 'لیست IP ترجیحی (yx):',
                     preferredIPsURL: 'URL منبع IP ترجیحی (yxURL):',
+                    latencyTest: 'تست تاخیر',
+                    latencyTestIP: 'IP/دامنه تست:',
+                    latencyTestIPPlaceholder: 'IP یا دامنه وارد کنید، چند مورد با کاما جدا شوند',
+                    latencyTestPort: 'پورت:',
+                    startTest: 'شروع تست',
+                    stopTest: 'توقف تست',
+                    testResult: 'نتیجه تست:',
+                    addToYx: 'افزودن به لیست ترجیحی',
+                    addSelectedToYx: 'افزودن موارد انتخاب شده',
+                    selectAll: 'انتخاب همه',
+                    deselectAll: 'لغو انتخاب',
+                    testingInProgress: 'در حال تست...',
+                    testComplete: 'تست کامل شد',
+                    latencyMs: 'تاخیر',
+                    timeout: 'زمان تمام شد',
                     socks5Config: 'تنظیمات SOCKS5 (s):',
                     customHomepage: 'URL صفحه اصلی سفارشی (homepage):',
                     customHomepagePlaceholder: 'مثال: https://example.com',
@@ -2460,6 +2490,38 @@
                                 <input type="text" id="preferredIPsURL" placeholder="${isFarsi ? 'پیش‌فرض: https://raw.githubusercontent.com/qwer-search/bestip/refs/heads/main/kejilandbestip.txt' : '默认: https://raw.githubusercontent.com/qwer-search/bestip/refs/heads/main/kejilandbestip.txt'}" style="width: 100%; padding: 12px; background: rgba(0, 0, 0, 0.8); border: 2px solid #00ff00; color: #00ff00; font-family: 'Courier New', monospace; font-size: 14px;">
                                 <small style="color: #00aa00; font-size: 0.85rem;">${isFarsi ? 'URL منبع لیست IP ترجیحی سفارشی، اگر خالی بگذارید از آدرس پیش‌فرض استفاده می‌شود' : '自定义优选IP列表来源URL，留空则使用默认地址'}</small>
                         </div>
+                        
+                        <!-- 延迟测试功能区域 -->
+                        <div style="margin-bottom: 20px; padding: 15px; background: rgba(0, 40, 0, 0.6); border: 2px solid #00aa00; border-radius: 8px;">
+                            <h4 style="color: #00ff00; margin: 0 0 15px 0; font-size: 1.1rem; text-shadow: 0 0 5px #00ff00;">⚡ ${t.latencyTest}</h4>
+                            <div style="display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap;">
+                                <div style="flex: 1; min-width: 200px;">
+                                    <label style="display: block; margin-bottom: 5px; color: #00ff00; font-size: 0.9rem;">${t.latencyTestIP}</label>
+                                    <input type="text" id="latencyTestInput" placeholder="${t.latencyTestIPPlaceholder}" style="width: 100%; padding: 10px; background: rgba(0, 0, 0, 0.8); border: 1px solid #00ff00; color: #00ff00; font-family: 'Courier New', monospace; font-size: 13px;">
+                                </div>
+                                <div style="width: 100px;">
+                                    <label style="display: block; margin-bottom: 5px; color: #00ff00; font-size: 0.9rem;">${t.latencyTestPort}</label>
+                                    <input type="number" id="latencyTestPort" value="443" min="1" max="65535" style="width: 100%; padding: 10px; background: rgba(0, 0, 0, 0.8); border: 1px solid #00ff00; color: #00ff00; font-family: 'Courier New', monospace; font-size: 13px;">
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                                <button type="button" id="startLatencyTest" style="background: rgba(0, 255, 0, 0.2); border: 1px solid #00ff00; padding: 8px 16px; color: #00ff00; font-family: 'Courier New', monospace; cursor: pointer; transition: all 0.3s;">▶ ${t.startTest}</button>
+                                <button type="button" id="stopLatencyTest" style="background: rgba(255, 0, 0, 0.2); border: 1px solid #ff4444; padding: 8px 16px; color: #ff4444; font-family: 'Courier New', monospace; cursor: pointer; display: none; transition: all 0.3s;">⏹ ${t.stopTest}</button>
+                            </div>
+                            <div id="latencyTestStatus" style="color: #00aa00; font-size: 0.9rem; margin-bottom: 10px; display: none;"></div>
+                            <div id="latencyTestResults" style="max-height: 250px; overflow-y: auto; display: none;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                    <span style="color: #00ff00; font-weight: bold;">${t.testResult}</span>
+                                    <div style="display: flex; gap: 8px;">
+                                        <button type="button" id="selectAllResults" style="background: transparent; border: 1px solid #00aa00; padding: 4px 10px; color: #00aa00; font-size: 0.8rem; cursor: pointer;">${t.selectAll}</button>
+                                        <button type="button" id="deselectAllResults" style="background: transparent; border: 1px solid #00aa00; padding: 4px 10px; color: #00aa00; font-size: 0.8rem; cursor: pointer;">${t.deselectAll}</button>
+                                    </div>
+                                </div>
+                                <div id="latencyResultsList" style="background: rgba(0, 0, 0, 0.5); border: 1px solid #004400; border-radius: 4px; padding: 10px;"></div>
+                                <button type="button" id="addSelectedToYx" style="margin-top: 10px; background: rgba(0, 200, 0, 0.3); border: 1px solid #00ff00; padding: 10px 20px; color: #00ff00; font-family: 'Courier New', monospace; font-weight: bold; cursor: pointer; width: 100%; transition: all 0.3s;">✓ ${t.addSelectedToYx}</button>
+                            </div>
+                        </div>
+                        
                         <div style="margin-bottom: 15px;">
                                 <label style="display: block; margin-bottom: 8px; color: #00ff00; font-weight: bold; text-shadow: 0 0 3px #00ff00;">${t.socks5Config}</label>
                                 <input type="text" id="socksConfig" placeholder="${isFarsi ? 'مثال: user:pass@host:port یا host:port' : '例如: user:pass@host:port 或 host:port'}" style="width: 100%; padding: 12px; background: rgba(0, 0, 0, 0.8); border: 2px solid #00ff00; color: #00ff00; font-family: 'Courier New', monospace; font-size: 14px;">
@@ -3570,6 +3632,200 @@
                         };
                         await saveConfig(configData);
                     });
+                }
+                
+                // 延迟测试功能
+                let testAbortController = null;
+                let testResults = [];
+                
+                const startTestBtn = document.getElementById('startLatencyTest');
+                const stopTestBtn = document.getElementById('stopLatencyTest');
+                const testStatus = document.getElementById('latencyTestStatus');
+                const testResultsDiv = document.getElementById('latencyTestResults');
+                const resultsList = document.getElementById('latencyResultsList');
+                const addSelectedBtn = document.getElementById('addSelectedToYx');
+                const selectAllBtn = document.getElementById('selectAllResults');
+                const deselectAllBtn = document.getElementById('deselectAllResults');
+                
+                if (startTestBtn) {
+                    startTestBtn.addEventListener('click', async function() {
+                        const inputField = document.getElementById('latencyTestInput');
+                        const portField = document.getElementById('latencyTestPort');
+                        const inputValue = inputField.value.trim();
+                        const defaultPort = portField.value || '443';
+                        
+                        if (!inputValue) {
+                            alert('${isFarsi ? 'لطفا IP یا دامنه وارد کنید' : '请输入IP或域名'}');
+                            return;
+                        }
+                        
+                        // 解析输入的IP/域名列表
+                        const targets = inputValue.split(',').map(t => t.trim()).filter(t => t);
+                        if (targets.length === 0) return;
+                        
+                        // 显示测试状态
+                        startTestBtn.style.display = 'none';
+                        stopTestBtn.style.display = 'inline-block';
+                        testStatus.style.display = 'block';
+                        testResultsDiv.style.display = 'block';
+                        resultsList.innerHTML = '';
+                        testResults = [];
+                        
+                        testAbortController = new AbortController();
+                        
+                        let completed = 0;
+                        const total = targets.length;
+                        
+                        for (const target of targets) {
+                            if (testAbortController.signal.aborted) break;
+                            
+                            testStatus.textContent = '${isFarsi ? 'در حال تست' : '测试中'}: ' + (completed + 1) + '/' + total + ' - ' + target;
+                            
+                            let host = target;
+                            let port = defaultPort;
+                            let nodeName = '';
+                            
+                            // 解析 IP:端口#名称 格式
+                            if (target.includes('#')) {
+                                const parts = target.split('#');
+                                nodeName = parts[1] || '';
+                                host = parts[0];
+                            }
+                            
+                            if (host.includes(':') && !host.startsWith('[')) {
+                                const lastColon = host.lastIndexOf(':');
+                                const possiblePort = host.substring(lastColon + 1);
+                                if (/^[0-9]+$/.test(possiblePort)) {
+                                    port = possiblePort;
+                                    host = host.substring(0, lastColon);
+                                }
+                            } else if (host.includes(']:')) {
+                                const parts = host.split(']:');
+                                host = parts[0] + ']';
+                                port = parts[1];
+                            }
+                            
+                            const result = await testLatency(host, port, testAbortController.signal);
+                            result.nodeName = nodeName || host + ':' + port;
+                            result.host = host;
+                            result.port = port;
+                            testResults.push(result);
+                            
+                            // 添加结果到列表
+                            const resultItem = document.createElement('div');
+                            resultItem.style.cssText = 'display: flex; align-items: center; padding: 8px; border-bottom: 1px solid #003300; gap: 10px;';
+                            
+                            const checkbox = document.createElement('input');
+                            checkbox.type = 'checkbox';
+                            checkbox.checked = result.success;
+                            checkbox.disabled = !result.success;
+                            checkbox.dataset.index = testResults.length - 1;
+                            checkbox.style.cssText = 'width: 18px; height: 18px; cursor: pointer;';
+                            
+                            const info = document.createElement('div');
+                            info.style.cssText = 'flex: 1; font-family: monospace; font-size: 13px;';
+                            
+                            if (result.success) {
+                                info.innerHTML = '<span style="color: #00ff00;">' + result.nodeName + '</span> <span style="color: #ffff00;">' + result.latency + 'ms</span>';
+                            } else {
+                                info.innerHTML = '<span style="color: #ff4444;">' + result.nodeName + '</span> <span style="color: #ff4444;">${isFarsi ? 'زمان تمام شد' : '超时'}</span>';
+                            }
+                            
+                            resultItem.appendChild(checkbox);
+                            resultItem.appendChild(info);
+                            resultsList.appendChild(resultItem);
+                            
+                            completed++;
+                        }
+                        
+                        testStatus.textContent = '${isFarsi ? 'تست کامل شد' : '测试完成'}: ' + completed + '/' + total;
+                        startTestBtn.style.display = 'inline-block';
+                        stopTestBtn.style.display = 'none';
+                    });
+                }
+                
+                if (stopTestBtn) {
+                    stopTestBtn.addEventListener('click', function() {
+                        if (testAbortController) {
+                            testAbortController.abort();
+                        }
+                        startTestBtn.style.display = 'inline-block';
+                        stopTestBtn.style.display = 'none';
+                        testStatus.textContent = '${isFarsi ? 'تست متوقف شد' : '测试已停止'}';
+                    });
+                }
+                
+                if (selectAllBtn) {
+                    selectAllBtn.addEventListener('click', function() {
+                        const checkboxes = resultsList.querySelectorAll('input[type="checkbox"]:not(:disabled)');
+                        checkboxes.forEach(cb => cb.checked = true);
+                    });
+                }
+                
+                if (deselectAllBtn) {
+                    deselectAllBtn.addEventListener('click', function() {
+                        const checkboxes = resultsList.querySelectorAll('input[type="checkbox"]');
+                        checkboxes.forEach(cb => cb.checked = false);
+                    });
+                }
+                
+                if (addSelectedBtn) {
+                    addSelectedBtn.addEventListener('click', function() {
+                        const checkboxes = resultsList.querySelectorAll('input[type="checkbox"]:checked');
+                        if (checkboxes.length === 0) {
+                            alert('${isFarsi ? 'لطفا حداقل یک مورد انتخاب کنید' : '请至少选择一项'}');
+                            return;
+                        }
+                        
+                        const selectedItems = [];
+                        checkboxes.forEach(cb => {
+                            const idx = parseInt(cb.dataset.index);
+                            const result = testResults[idx];
+                            if (result && result.success) {
+                                const itemStr = result.host + ':' + result.port + '#' + result.nodeName + '-' + result.latency + 'ms';
+                                selectedItems.push(itemStr);
+                            }
+                        });
+                        
+                        if (selectedItems.length > 0) {
+                            const preferredIPsInput = document.getElementById('preferredIPs');
+                            const currentValue = preferredIPsInput.value.trim();
+                            const newValue = currentValue ? currentValue + ',' + selectedItems.join(',') : selectedItems.join(',');
+                            preferredIPsInput.value = newValue;
+                            showStatus('${isFarsi ? 'موفقیت‌آمیز بود' : '已添加'} ' + selectedItems.length + ' ${isFarsi ? 'مورد به لیست ترجیحی' : '项到优选列表'}', 'success');
+                        }
+                    });
+                }
+                
+                // 延迟测试函数
+                async function testLatency(host, port, signal) {
+                    const startTime = Date.now();
+                    const timeout = 5000;
+                    
+                    try {
+                        const controller = new AbortController();
+                        const timeoutId = setTimeout(() => controller.abort(), timeout);
+                        
+                        // 合并外部信号和超时信号
+                        if (signal) {
+                            signal.addEventListener('abort', () => controller.abort());
+                        }
+                        
+                        // 使用fetch测试连接性
+                        const testUrl = 'https://' + (host.startsWith('[') ? host : host) + ':' + port + '/cdn-cgi/trace';
+                        const response = await fetch(testUrl, { 
+                            method: 'HEAD',
+                            signal: controller.signal,
+                            mode: 'no-cors'
+                        });
+                        
+                        clearTimeout(timeoutId);
+                        const latency = Date.now() - startTime;
+                        
+                        return { success: true, latency: latency };
+                    } catch (error) {
+                        return { success: false, latency: -1, error: error.message };
+                    }
                 }
             });
         </script>
