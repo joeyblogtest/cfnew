@@ -3943,9 +3943,7 @@
                 }
                 
                 async function testLatency(host, port, signal) {
-                    const startTime = Date.now();
                     const timeout = 8000;
-                    const handshakeTime = 300;
                     let colo = '';
                     let testUrl = '';
                     
@@ -3964,22 +3962,19 @@
                         
                         console.log('[LatencyTest] Testing:', testUrl, 'Original:', host + ':' + port, 'HexIP:', hexIP);
                         
-                        const response = await fetch(testUrl, { 
+                        const firstStart = Date.now();
+                        const response1 = await fetch(testUrl, { 
                             signal: controller.signal
                         });
+                        const firstTime = Date.now() - firstStart;
                         
-                        clearTimeout(timeoutId);
-                        const totalTime = Date.now() - startTime;
-                        const latency = Math.max(1, totalTime - handshakeTime);
-                        
-                        console.log('[LatencyTest] Response:', response.status, 'Total:', totalTime + 'ms', 'Latency:', latency + 'ms (handshake -' + handshakeTime + 'ms)');
-                        
-                        if (!response.ok) {
-                            return { success: false, latency: latency, error: 'HTTP ' + response.status + ' ' + response.statusText, colo: '', testUrl: testUrl };
+                        if (!response1.ok) {
+                            clearTimeout(timeoutId);
+                            return { success: false, latency: firstTime, error: 'HTTP ' + response1.status + ' ' + response1.statusText, colo: '', testUrl: testUrl };
                         }
                         
                         try {
-                            const text = await response.text();
+                            const text = await response1.text();
                             console.log('[LatencyTest] Response body:', text.substring(0, 200));
                             const data = JSON.parse(text);
                             if (data.colo) {
@@ -3989,13 +3984,20 @@
                             console.log('[LatencyTest] Parse error:', e.message);
                         }
                         
+                        const secondStart = Date.now();
+                        const response2 = await fetch(testUrl, { 
+                            signal: controller.signal
+                        });
+                        await response2.text();
+                        const latency = Date.now() - secondStart;
+                        
+                        clearTimeout(timeoutId);
+                        
+                        console.log('[LatencyTest] First:', firstTime + 'ms (DNS+TLS+RTT)', 'Second:', latency + 'ms (RTT only)');
+                        
                         return { success: true, latency: latency, colo: colo, testUrl: testUrl };
                     } catch (error) {
-                        const elapsed = Date.now() - startTime;
-                        let errorMsg = error.message;
-                        if (error.name === 'AbortError' || elapsed >= timeout - 100) {
-                            errorMsg = '${isFarsi ? 'زمان تمام شد' : '超时'} (' + elapsed + 'ms)';
-                        }
+                        const errorMsg = error.name === 'AbortError' ? '${isFarsi ? 'زمان تمام شد' : '超时'}' : error.message;
                         console.log('[LatencyTest] Error:', errorMsg, 'URL:', testUrl);
                         return { success: false, latency: -1, error: errorMsg, colo: '', testUrl: testUrl };
                     }
