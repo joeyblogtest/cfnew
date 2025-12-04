@@ -364,16 +364,6 @@
                         customPreferredDomains = [];
                         
                         preferredList.forEach(item => {
-                            // 检查是否是优选API URL（以https://开头）
-                            if (item.toLowerCase().startsWith('https://')) {
-                                // 优选API URL直接添加到customPreferredIPs中，订阅生成时会调用请求优选API函数
-                                customPreferredIPs.push({ 
-                                    ip: item, 
-                                    port: null,
-                                    isp: '优选API'
-                                });
-                                return;
-                            }
                             
                             let nodeName = '';
                             let addressPart = item;
@@ -538,39 +528,6 @@
                         }
                     }
                 
-                    return new Response(JSON.stringify({ error: '无效的API路径' }), { 
-                        status: 404,
-                        headers: { 'Content-Type': 'application/json' }
-                    });
-                }
-                
-                // 验证优选API接口（从样品1迁移）
-                if (url.pathname.includes('/api/verify-preferred-api')) {
-                    const pathParts = url.pathname.split('/').filter(p => p);
-                    
-                    const apiIndex = pathParts.indexOf('api');
-                    if (apiIndex > 0) {
-                        const pathSegments = pathParts.slice(0, apiIndex);
-                        const pathIdentifier = pathSegments.join('/');
-                        
-                        let isValid = false;
-                        if (cp && cp.trim()) {
-                            const cleanCustomPath = cp.trim().startsWith('/') ? cp.trim().substring(1) : cp.trim();
-                            isValid = (pathIdentifier === cleanCustomPath);
-                        } else {
-                            isValid = (isValidFormat(pathIdentifier) && pathIdentifier === at);
-                        }
-                        
-                        if (isValid) {
-                            return await handleVerifyPreferredAPI(request);
-                        } else {
-                            return new Response(JSON.stringify({ error: '路径验证失败' }), { 
-                                status: 403,
-                                headers: { 'Content-Type': 'application/json' }
-                            });
-                        }
-                    }
-                    
                     return new Response(JSON.stringify({ error: '无效的API路径' }), { 
                         status: 404,
                         headers: { 'Content-Type': 'application/json' }
@@ -1301,78 +1258,16 @@
 
         const hasCustomPreferred = customPreferredIPs.length > 0 || customPreferredDomains.length > 0;
         
-        // 处理优选API（从样品1迁移的在线优选功能）
-        const 优选API列表 = [];
-        const 优选IP列表 = [];
-        const 其他节点列表 = [];
-        
-        // 从自定义优选配置中分离优选API和IP
-        if (hasCustomPreferred) {
-            // 检查customPreferredIPs中是否有优选API URL
-            customPreferredIPs.forEach(item => {
-                const ipStr = item.ip || '';
-                if (ipStr.toLowerCase().startsWith('https://')) {
-                    优选API列表.push(ipStr);
-                } else if (ipStr.toLowerCase().includes('://')) {
-                    其他节点列表.push(item);
-                } else {
-                    优选IP列表.push(item);
-                }
-            });
-            
-            // 检查customPreferredDomains中是否有优选API URL
-            customPreferredDomains.forEach(item => {
-                const domainStr = item.domain || '';
-                if (domainStr.toLowerCase().startsWith('https://')) {
-                    优选API列表.push(domainStr);
-                } else {
-                    其他节点列表.push(item);
-                }
-            });
-        }
-        
         if (disablePreferred) {
         } else if (hasCustomPreferred) {
-            // 如果有优选API，先请求获取IP列表
-            if (优选API列表.length > 0 && epi) {
-                try {
-                    const 优选API的IP = await 请求优选API(优选API列表);
-                    // 将优选API返回的IP转换为节点列表格式
-                    const 优选API节点列表 = 优选API的IP.map(ipStr => {
-                        // 解析IP字符串格式: IP:端口#备注 或 [IPv6]:端口#备注
-                        const regex = /^(\[[\da-fA-F:]+\]|[\d.]+|[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?)*)(?::(\d+))?(?:#(.+))?$/;
-                        const match = ipStr.match(regex);
-                        if (match) {
-                            const 节点地址 = match[1].replace(/[\[\]]/g, ''); // 移除IPv6的方括号
-                            const 节点端口 = match[2] || 443;
-                            const 节点备注 = match[3] || 节点地址;
-                            return { ip: 节点地址, port: parseInt(节点端口), isp: 节点备注 };
-                        }
-                        return null;
-                    }).filter(item => item !== null);
-                    
-                    if (优选API节点列表.length > 0) {
-                        await addNodesFromList(优选API节点列表);
-                    }
-                } catch (error) {
-                    console.error('请求优选API失败:', error);
-                }
+            
+            if (customPreferredIPs.length > 0 && epi) {
+                await addNodesFromList(customPreferredIPs);
             }
             
-            // 添加本地优选IP
-            if (优选IP列表.length > 0 && epi) {
-                await addNodesFromList(优选IP列表);
-            }
-            
-            // 添加其他节点（非优选API的域名等）
-            if (其他节点列表.length > 0) {
-                const 其他节点格式化列表 = 其他节点列表.map(item => {
-                    if (item.domain) {
-                        return { ip: item.domain, isp: item.name || item.domain };
-                    }
-                    return item;
-                });
-                await addNodesFromList(其他节点格式化列表);
+            if (customPreferredDomains.length > 0 && epd) {
+                const customDomainList = customPreferredDomains.map(d => ({ ip: d.domain, isp: d.name || d.domain }));
+                await addNodesFromList(customDomainList);
             }
         } else {
             
@@ -1711,142 +1606,6 @@
         } catch (error) {
             return [];
         }
-    }
-
-    // 整理成数组函数（从样品1迁移）
-    async function 整理成数组(内容) {
-        var 替换后的内容 = 内容.replace(/[	"'\r\n]+/g, ',').replace(/,+/g, ',');
-        if (替换后的内容.charAt(0) == ',') 替换后的内容 = 替换后的内容.slice(1);
-        if (替换后的内容.charAt(替换后的内容.length - 1) == ',') 替换后的内容 = 替换后的内容.slice(0, 替换后的内容.length - 1);
-        const 地址数组 = 替换后的内容.split(',');
-        return 地址数组;
-    }
-
-    // 生成随机IP函数（从样品1迁移）
-    async function 生成随机IP(request, count = 16, 指定端口 = -1) {
-        const asnMap = { '9808': 'cmcc', '4837': 'cu', '4134': 'ct' }, asn = request.cf.asn;
-        const cidr_url = asnMap[asn] ? `https://raw.githubusercontent.com/cmliu/cmliu/main/CF-CIDR/${asnMap[asn]}.txt` : 'https://raw.githubusercontent.com/cmliu/cmliu/main/CF-CIDR.txt';
-        const cfname = { '9808': 'CF移动优选', '4837': 'CF联通优选', '4134': 'CF电信优选' }[asn] || 'CF官方优选';
-        const cfport = [443, 2053, 2083, 2087, 2096, 8443];
-        let cidrList = [];
-        try { const res = await fetch(cidr_url); cidrList = res.ok ? await 整理成数组(await res.text()) : ['104.16.0.0/13']; } catch { cidrList = ['104.16.0.0/13']; }
-
-        const generateRandomIPFromCIDR = (cidr) => {
-            const [baseIP, prefixLength] = cidr.split('/'), prefix = parseInt(prefixLength), hostBits = 32 - prefix;
-            const ipInt = baseIP.split('.').reduce((a, p, i) => a | (parseInt(p) << (24 - i * 8)), 0);
-            const randomOffset = Math.floor(Math.random() * Math.pow(2, hostBits));
-            const mask = (0xFFFFFFFF << hostBits) >>> 0, randomIP = (((ipInt & mask) >>> 0) + randomOffset) >>> 0;
-            return [(randomIP >>> 24) & 0xFF, (randomIP >>> 16) & 0xFF, (randomIP >>> 8) & 0xFF, randomIP & 0xFF].join('.');
-        };
-
-        const randomIPs = Array.from({ length: count }, () => {
-            const ip = generateRandomIPFromCIDR(cidrList[Math.floor(Math.random() * cidrList.length)]);
-            return `${ip}:${指定端口 === -1 ? cfport[Math.floor(Math.random() * cfport.length)] : 指定端口}#${cfname}`;
-        });
-        return [randomIPs, randomIPs.join('\n')];
-    }
-
-    // 请求优选API函数（从样品1迁移）
-    async function 请求优选API(urls, 默认端口 = '443', 超时时间 = 3000) {
-        if (!urls?.length) return [];
-        const results = new Set();
-        await Promise.allSettled(urls.map(async (url) => {
-            try {
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 超时时间);
-                const response = await fetch(url, { signal: controller.signal });
-                clearTimeout(timeoutId);
-                let text = '';
-                try {
-                    const buffer = await response.arrayBuffer();
-                    const contentType = (response.headers.get('content-type') || '').toLowerCase();
-                    const charset = contentType.match(/charset=([^\s;]+)/i)?.[1]?.toLowerCase() || '';
-
-                    // 根据 Content-Type 响应头判断编码优先级
-                    let decoders = ['utf-8', 'gb2312']; // 默认优先 UTF-8
-                    if (charset.includes('gb') || charset.includes('gbk') || charset.includes('gb2312')) {
-                        decoders = ['gb2312', 'utf-8']; // 如果明确指定 GB 系编码，优先尝试 GB2312
-                    }
-
-                    // 尝试多种编码解码
-                    let decodeSuccess = false;
-                    for (const decoder of decoders) {
-                        try {
-                            const decoded = new TextDecoder(decoder).decode(buffer);
-                            // 验证解码结果的有效性
-                            if (decoded && decoded.length > 0 && !decoded.includes('\ufffd')) {
-                                text = decoded;
-                                decodeSuccess = true;
-                                break;
-                            } else if (decoded && decoded.length > 0) {
-                                // 如果有替换字符 (U+FFFD)，说明编码不匹配，继续尝试下一个编码
-                                continue;
-                            }
-                        } catch (e) {
-                            // 该编码解码失败，尝试下一个
-                            continue;
-                        }
-                    }
-
-                    // 如果所有编码都失败或无效，尝试 response.text()
-                    if (!decodeSuccess) {
-                        text = await response.text();
-                    }
-
-                    // 如果返回的是空或无效数据，返回
-                    if (!text || text.trim().length === 0) {
-                        return;
-                    }
-                } catch (e) {
-                    console.error('Failed to decode response:', e);
-                    return;
-                }
-                const lines = text.trim().split('\n').map(l => l.trim()).filter(l => l);
-                const isCSV = lines.length > 1 && lines[0].includes(',');
-                const IPV6_PATTERN = /^[^\[\]]*:[^\[\]]*:[^\[\]]/;
-                if (!isCSV) {
-                    lines.forEach(line => {
-                        const hashIndex = line.indexOf('#');
-                        const [hostPart, remark] = hashIndex > -1 ? [line.substring(0, hashIndex), line.substring(hashIndex)] : [line, ''];
-                        let hasPort = false;
-                        if (hostPart.startsWith('[')) {
-                            hasPort = /\]:(\d+)$/.test(hostPart);
-                        } else {
-                            const colonIndex = hostPart.lastIndexOf(':');
-                            hasPort = colonIndex > -1 && /^\d+$/.test(hostPart.substring(colonIndex + 1));
-                        }
-                        const port = new URL(url).searchParams.get('port') || 默认端口;
-                        results.add(hasPort ? line : `${hostPart}:${port}${remark}`);
-                    });
-                } else {
-                    const headers = lines[0].split(',').map(h => h.trim());
-                    const dataLines = lines.slice(1);
-                    if (headers.includes('IP地址') && headers.includes('端口') && headers.includes('数据中心')) {
-                        const ipIdx = headers.indexOf('IP地址'), portIdx = headers.indexOf('端口');
-                        const remarkIdx = headers.indexOf('国家') > -1 ? headers.indexOf('国家') :
-                            headers.indexOf('城市') > -1 ? headers.indexOf('城市') : headers.indexOf('数据中心');
-                        const tlsIdx = headers.indexOf('TLS');
-                        dataLines.forEach(line => {
-                            const cols = line.split(',').map(c => c.trim());
-                            if (tlsIdx !== -1 && cols[tlsIdx]?.toLowerCase() !== 'true') return;
-                            const wrappedIP = IPV6_PATTERN.test(cols[ipIdx]) ? `[${cols[ipIdx]}]` : cols[ipIdx];
-                            results.add(`${wrappedIP}:${cols[portIdx]}#${cols[remarkIdx]}`);
-                        });
-                    } else if (headers.some(h => h.includes('IP')) && headers.some(h => h.includes('延迟')) && headers.some(h => h.includes('下载速度'))) {
-                        const ipIdx = headers.findIndex(h => h.includes('IP'));
-                        const delayIdx = headers.findIndex(h => h.includes('延迟'));
-                        const speedIdx = headers.findIndex(h => h.includes('下载速度'));
-                        const port = new URL(url).searchParams.get('port') || 默认端口;
-                        dataLines.forEach(line => {
-                            const cols = line.split(',').map(c => c.trim());
-                            const wrappedIP = IPV6_PATTERN.test(cols[ipIdx]) ? `[${cols[ipIdx]}]` : cols[ipIdx];
-                            results.add(`${wrappedIP}:${port}#CF优选 ${cols[delayIdx]}ms ${cols[speedIdx]}MB/s`);
-                        });
-                    }
-                }
-            } catch (e) { }
-        }));
-        return Array.from(results);
     }
 
     async function handleWsRequest(request) {
@@ -2695,16 +2454,6 @@
                                 <label style="display: block; margin-bottom: 8px; color: #00ff00; font-weight: bold; text-shadow: 0 0 3px #00ff00;">${t.preferredIPs}</label>
                                 <input type="text" id="preferredIPs" placeholder="${isFarsi ? 'مثال: 1.2.3.4:443#گره هنگ‌کنگ,5.6.7.8:80#گره آمریکا,example.com:8443#گره سنگاپور' : '例如: 1.2.3.4:443#香港节点,5.6.7.8:80#美国节点,example.com:8443#新加坡节点'}" style="width: 100%; padding: 12px; background: rgba(0, 0, 0, 0.8); border: 2px solid #00ff00; color: #00ff00; font-family: 'Courier New', monospace; font-size: 14px;">
                                 <small style="color: #00aa00; font-size: 0.85rem;">${isFarsi ? 'فرمت: IP:پورت#نام گره یا IP:پورت (بدون # از نام پیش‌فرض استفاده می‌شود). پشتیبانی از چندین مورد، با کاما جدا می‌شوند. <span style="color: #ffaa00;">IP های اضافه شده از طریق API به طور خودکار در اینجا نمایش داده می‌شوند.</span>' : '格式: IP:端口#节点名称 或 IP:端口 (无#则使用默认名称)。支持多个，用逗号分隔。<span style="color: #ffaa00;">API添加的IP会自动显示在这里。</span>'}</small>
-                        </div>
-                        <div style="margin-bottom: 15px; padding: 15px; background: rgba(0, 20, 0, 0.6); border: 1px solid #00ff00; border-radius: 5px;">
-                                <label style="display: block; margin-bottom: 8px; color: #00ff00; font-weight: bold; text-shadow: 0 0 3px #00ff00;">${isFarsi ? '🔍 تست API ترجیحی آنلاین' : '🔍 测试在线优选API'}</label>
-                                <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-                                    <input type="text" id="verifyPreferredAPIUrl" placeholder="${isFarsi ? 'https://example.com/api/ips' : 'https://example.com/api/ips'}" style="flex: 1; padding: 10px; background: rgba(0, 0, 0, 0.8); border: 1px solid #00ff00; color: #00ff00; font-family: 'Courier New', monospace; font-size: 13px;">
-                                    <input type="text" id="verifyPreferredAPIPort" placeholder="443" value="443" style="width: 80px; padding: 10px; background: rgba(0, 0, 0, 0.8); border: 1px solid #00ff00; color: #00ff00; font-family: 'Courier New', monospace; font-size: 13px;">
-                                    <button type="button" onclick="verifyPreferredAPI()" style="background: rgba(0, 255, 0, 0.15); border: 2px solid #00ff00; padding: 10px 20px; color: #00ff00; font-family: 'Courier New', monospace; font-weight: bold; cursor: pointer; text-shadow: 0 0 8px #00ff00; transition: all 0.4s ease; white-space: nowrap;">${isFarsi ? 'تست' : '测试'}</button>
-                                </div>
-                                <div id="verifyPreferredAPIResult" style="display: none; margin-top: 10px; padding: 10px; background: rgba(0, 20, 0, 0.8); border: 1px solid #00ff00; color: #00ff00; font-family: 'Courier New', monospace; font-size: 12px; max-height: 200px; overflow-y: auto; word-break: break-all;"></div>
-                                <small style="color: #00aa00; font-size: 0.8rem; display: block; margin-top: 8px;">${isFarsi ? 'وارد کردن URL API ترجیحی برای تست. اگر موفق باشد، لیست IP های برگشتی نمایش داده می‌شود.' : '输入优选API的URL进行测试。如果成功，将显示返回的IP列表。'}</small>
                         </div>
                         <div style="margin-bottom: 15px;">
                                 <label style="display: block; margin-bottom: 8px; color: #00ff00; font-weight: bold; text-shadow: 0 0 3px #00ff00;">${t.preferredIPsURL}</label>
@@ -3579,57 +3328,6 @@
                     pathTypeStatus.innerHTML = '<div style="color: #44ff44;">使用类型: <strong>UUID 路径 (u)</strong></div>' +
                         '<div style="margin-top: 5px; color: #00ff00;">当前路径: <span style="color: #ffaa00;">' + (currentPath || '(UUID)') + '</span></div>' +
                         '<div style="margin-top: 5px; font-size: 0.9rem; color: #00aa00;">访问地址: ' + currentUrl.split('/sub')[0] + '/sub</div>';
-                }
-            }
-            
-            // 验证优选API函数（从样品1迁移）
-            async function verifyPreferredAPI() {
-                const apiUrl = document.getElementById('verifyPreferredAPIUrl').value.trim();
-                const port = document.getElementById('verifyPreferredAPIPort').value.trim() || '443';
-                const resultDiv = document.getElementById('verifyPreferredAPIResult');
-                
-                if (!apiUrl) {
-                    resultDiv.style.display = 'block';
-                    resultDiv.style.color = '#ff0000';
-                    resultDiv.textContent = '请输入优选API的URL';
-                    return;
-                }
-                
-                // 验证URL格式
-                try {
-                    new URL(apiUrl);
-                } catch (e) {
-                    resultDiv.style.display = 'block';
-                    resultDiv.style.color = '#ff0000';
-                    resultDiv.textContent = '无效的URL格式';
-                    return;
-                }
-                
-                resultDiv.style.display = 'block';
-                resultDiv.style.color = '#00ff00';
-                resultDiv.textContent = '正在测试优选API...';
-                
-                try {
-                    const currentUrl = window.location.href;
-                    const pathParts = window.location.pathname.split('/').filter(p => p);
-                    const currentPath = pathParts.length > 0 ? pathParts[0] : '';
-                    const apiPath = currentPath ? '/' + currentPath + '/api/verify-preferred-api' : '/api/verify-preferred-api';
-                    const apiEndpoint = new URL(apiPath, currentUrl.split('/sub')[0]).href;
-                    
-                    const response = await fetch(apiEndpoint + '?url=' + encodeURIComponent(apiUrl) + '&port=' + encodeURIComponent(port));
-                    const data = await response.json();
-                    
-                    if (data.success && data.data && data.data.length > 0) {
-                        resultDiv.style.color = '#00ff00';
-                        resultDiv.innerHTML = '<div style="margin-bottom: 10px; font-weight: bold;">✅ 测试成功！获取到 ' + data.count + ' 个IP地址：</div>' +
-                            '<div style="max-height: 150px; overflow-y: auto;">' + data.data.map(function(ip) { return '<div style="padding: 2px 0;">' + ip + '</div>'; }).join('') + '</div>';
-                    } else {
-                        resultDiv.style.color = '#ffaa00';
-                        resultDiv.textContent = '⚠️ ' + (data.message || '未获取到IP地址');
-                    }
-                } catch (error) {
-                    resultDiv.style.color = '#ff0000';
-                    resultDiv.textContent = '❌ 测试失败: ' + error.message;
                 }
             }
             
@@ -4512,17 +4210,40 @@
         
         const url = piu || "https://raw.githubusercontent.com/qwer-search/bestip/refs/heads/main/kejilandbestip.txt";
         try {
+            // 使用增强的 请求优选API 函数获取优选IP
+            const urls = url.includes(',') ? url.split(',').map(u => u.trim()).filter(u => u) : [url];
+            const apiResults = await 请求优选API(urls, '443', 5000);
+            
+            if (apiResults.length > 0) {
+                // 将 请求优选API 返回的格式转换为 fetchAndParseNewIPs 的返回格式
+                const results = [];
+                const regex = /^(\[[\da-fA-F:]+\]|[\d.]+|[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?)*)(?::(\d+))?(?:#(.+))?$/;
+                
+                for (const item of apiResults) {
+                    const match = item.match(regex);
+                    if (match) {
+                        results.push({
+                            ip: match[1],
+                            port: parseInt(match[2] || '443', 10),
+                            name: match[3]?.trim() || match[1]
+                        });
+                    }
+                }
+                return results;
+            }
+            
+            // 如果 请求优选API 失败，回退到原始方法
             const response = await fetch(url);
             if (!response.ok) return [];
             const text = await response.text();
             const results = [];
             const lines = text.trim().replace(/\r/g, "").split('\n');
-            const regex = /^([^:]+):(\d+)#(.*)$/;
+            const simpleRegex = /^([^:]+):(\d+)#(.*)$/;
 
             for (const line of lines) {
                 const trimmedLine = line.trim();
                 if (!trimmedLine) continue;
-                const match = trimmedLine.match(regex);
+                const match = trimmedLine.match(simpleRegex);
                 if (match) {
                     results.push({
                         ip: match[1],
@@ -5174,64 +4895,114 @@
         return domainRegex.test(domain);
     }
 
-    // 验证优选API处理函数（从样品1迁移）
-    async function handleVerifyPreferredAPI(request) {
-        const url = new URL(request.url);
-        
-        if (request.method === 'GET') {
-            const apiUrl = url.searchParams.get('url');
-            const port = url.searchParams.get('port') || '443';
-            
-            if (!apiUrl) {
-                return new Response(JSON.stringify({ 
-                    success: false, 
-                    data: [],
-                    error: '缺少URL参数',
-                    message: '请提供优选API的URL参数'
-                }), { 
-                    status: 400,
-                    headers: { 'Content-Type': 'application/json;charset=utf-8' } 
-                });
-            }
-            
-            try {
-                // 验证URL格式
-                new URL(apiUrl);
-                
-                // 调用请求优选API函数
-                const 优选API的IP = await 请求优选API([apiUrl], port);
-                
-                return new Response(JSON.stringify({ 
-                    success: true, 
-                    data: 优选API的IP,
-                    count: 优选API的IP.length,
-                    message: `成功获取 ${优选API的IP.length} 个IP地址`
-                }), { 
-                    status: 200, 
-                    headers: { 'Content-Type': 'application/json;charset=utf-8' } 
-                });
-            } catch (err) {
-                const errorResponse = { 
-                    success: false,
-                    msg: '验证优选API失败，失败原因：' + err.message, 
-                    error: err.message,
-                    data: []
-                };
-                return new Response(JSON.stringify(errorResponse, null, 2), { 
-                    status: 500, 
-                    headers: { 'Content-Type': 'application/json;charset=utf-8' } 
-                });
-            }
-        }
-        
-        return new Response(JSON.stringify({ 
-            success: false, 
-            data: [],
-            error: '不支持的请求方法',
-            message: '仅支持GET请求'
-        }), { 
-            status: 405,
-            headers: { 'Content-Type': 'application/json;charset=utf-8' } 
-        });
+    // 整理成数组 - 将文本内容整理成数组
+    async function 整理成数组(内容) {
+        var 替换后的内容 = 内容.replace(/[	"'\r\n]+/g, ',').replace(/,+/g, ',');
+        if (替换后的内容.charAt(0) == ',') 替换后的内容 = 替换后的内容.slice(1);
+        if (替换后的内容.charAt(替换后的内容.length - 1) == ',') 替换后的内容 = 替换后的内容.slice(0, 替换后的内容.length - 1);
+        const 地址数组 = 替换后的内容.split(',');
+        return 地址数组;
     }
+
+    // 请求优选API - 从远程API获取优选IP列表，支持多种格式（纯文本、CSV等）
+    async function 请求优选API(urls, 默认端口 = '443', 超时时间 = 3000) {
+        if (!urls?.length) return [];
+        const results = new Set();
+        await Promise.allSettled(urls.map(async (url) => {
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 超时时间);
+                const response = await fetch(url, { signal: controller.signal });
+                clearTimeout(timeoutId);
+                let text = '';
+                try {
+                    const buffer = await response.arrayBuffer();
+                    const contentType = (response.headers.get('content-type') || '').toLowerCase();
+                    const charset = contentType.match(/charset=([^\s;]+)/i)?.[1]?.toLowerCase() || '';
+
+                    // 根据 Content-Type 响应头判断编码优先级
+                    let decoders = ['utf-8', 'gb2312']; // 默认优先 UTF-8
+                    if (charset.includes('gb') || charset.includes('gbk') || charset.includes('gb2312')) {
+                        decoders = ['gb2312', 'utf-8']; // 如果明确指定 GB 系编码，优先尝试 GB2312
+                    }
+
+                    // 尝试多种编码解码
+                    let decodeSuccess = false;
+                    for (const decoder of decoders) {
+                        try {
+                            const decoded = new TextDecoder(decoder).decode(buffer);
+                            // 验证解码结果的有效性
+                            if (decoded && decoded.length > 0 && !decoded.includes('\ufffd')) {
+                                text = decoded;
+                                decodeSuccess = true;
+                                break;
+                            } else if (decoded && decoded.length > 0) {
+                                // 如果有替换字符 (U+FFFD)，说明编码不匹配，继续尝试下一个编码
+                                continue;
+                            }
+                        } catch (e) {
+                            // 该编码解码失败，尝试下一个
+                            continue;
+                        }
+                    }
+
+                    // 如果所有编码都失败或无效，尝试 response.text()
+                    if (!decodeSuccess) {
+                        text = await response.text();
+                    }
+
+                    // 如果返回的是空或无效数据，返回
+                    if (!text || text.trim().length === 0) {
+                        return;
+                    }
+                } catch (e) {
+                    console.error('Failed to decode response:', e);
+                    return;
+                }
+                const lines = text.trim().split('\n').map(l => l.trim()).filter(l => l);
+                const isCSV = lines.length > 1 && lines[0].includes(',');
+                const IPV6_PATTERN = /^[^\[\]]*:[^\[\]]*:[^\[\]]/;
+                if (!isCSV) {
+                    lines.forEach(line => {
+                        const hashIndex = line.indexOf('#');
+                        const [hostPart, remark] = hashIndex > -1 ? [line.substring(0, hashIndex), line.substring(hashIndex)] : [line, ''];
+                        let hasPort = false;
+                        if (hostPart.startsWith('[')) {
+                            hasPort = /\]:(\d+)$/.test(hostPart);
+                        } else {
+                            const colonIndex = hostPart.lastIndexOf(':');
+                            hasPort = colonIndex > -1 && /^\d+$/.test(hostPart.substring(colonIndex + 1));
+                        }
+                        const port = new URL(url).searchParams.get('port') || 默认端口;
+                        results.add(hasPort ? line : `${hostPart}:${port}${remark}`);
+                    });
+                } else {
+                    const headers = lines[0].split(',').map(h => h.trim());
+                    const dataLines = lines.slice(1);
+                    if (headers.includes('IP地址') && headers.includes('端口') && headers.includes('数据中心')) {
+                        const ipIdx = headers.indexOf('IP地址'), portIdx = headers.indexOf('端口');
+                        const remarkIdx = headers.indexOf('国家') > -1 ? headers.indexOf('国家') :
+                            headers.indexOf('城市') > -1 ? headers.indexOf('城市') : headers.indexOf('数据中心');
+                        const tlsIdx = headers.indexOf('TLS');
+                        dataLines.forEach(line => {
+                            const cols = line.split(',').map(c => c.trim());
+                            if (tlsIdx !== -1 && cols[tlsIdx]?.toLowerCase() !== 'true') return;
+                            const wrappedIP = IPV6_PATTERN.test(cols[ipIdx]) ? `[${cols[ipIdx]}]` : cols[ipIdx];
+                            results.add(`${wrappedIP}:${cols[portIdx]}#${cols[remarkIdx]}`);
+                        });
+                    } else if (headers.some(h => h.includes('IP')) && headers.some(h => h.includes('延迟')) && headers.some(h => h.includes('下载速度'))) {
+                        const ipIdx = headers.findIndex(h => h.includes('IP'));
+                        const delayIdx = headers.findIndex(h => h.includes('延迟'));
+                        const speedIdx = headers.findIndex(h => h.includes('下载速度'));
+                        const port = new URL(url).searchParams.get('port') || 默认端口;
+                        dataLines.forEach(line => {
+                            const cols = line.split(',').map(c => c.trim());
+                            const wrappedIP = IPV6_PATTERN.test(cols[ipIdx]) ? `[${cols[ipIdx]}]` : cols[ipIdx];
+                            results.add(`${wrappedIP}:${port}#CF优选 ${cols[delayIdx]}ms ${cols[speedIdx]}MB/s`);
+                        });
+                    }
+                }
+            } catch (e) { }
+        }));
+        return Array.from(results);
     }
